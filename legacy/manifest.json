@@ -10,6 +10,9 @@
   "background": {
     "service_worker": "background.js"
   },
-  "permissions": ["activeTab", "scripting"],
+  "side_panel": {
+    "default_path": "popup.html"
+  },
+  "permissions": ["activeTab", "scripting", "sidePanel"],
   "host_permissions": ["<all_urls>"]
 }
