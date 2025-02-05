@@ -1,7 +1,9 @@
 import { useState } from "react";
 import reactLogo from "@/assets/react.svg";
 import wxtLogo from "/wxt.svg";
+import { useEffect } from "react";
 import "./App.css";
+import "../../assets/main.css";
 import {
   Moon,
   Sun,
@@ -20,6 +22,8 @@ function App() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
 
+  const html = document.documentElement;
+  console.log(html);
   const showNotification = (message: string) => {
     setToastMessage(message);
     setShowToast(true);
@@ -34,14 +38,12 @@ function App() {
   };
 
   return (
-    <div className="w-[380px] min-h-[600px] bg-gray-900 text-gray-100 p-6 flex flex-col gap-6">
+    <div className="w-[380px] min-h-[600px] bg-background text-text p-6 flex flex-col gap-6">
       {/* Header */}
       <header className="flex items-center justify-between border-b border-gray-700 pb-4">
         <div className="flex items-center gap-2">
-          <Moon className="w-6 h-6 text-purple-400" />
-          <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-            Greyscale Master
-          </h1>
+          {/*bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent*/}
+          <h1 className="text-xl font-bold ">Monochromate</h1>
         </div>
       </header>
 
@@ -53,7 +55,7 @@ function App() {
           <button
             onClick={() => setGreyscaleEnabled(!isGreyscaleEnabled)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-300 ${
-              isGreyscaleEnabled ? "bg-purple-500" : "bg-gray-600"
+              isGreyscaleEnabled ? "bg-accent" : "bg-accent/15"
             }`}
             role="switch"
             aria-checked={isGreyscaleEnabled}
@@ -69,12 +71,12 @@ function App() {
         {/* Intensity Slider */}
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <label htmlFor="intensity" className="text-sm text-gray-300">
+            <label htmlFor="intensity" className="text-sm">
               Intensity: {intensity}%
             </label>
             <button
               onClick={() => setIntensity(50)}
-              className="flex items-center gap-1 text-sm text-gray-400 hover:text-purple-400 transition-colors"
+              className="flex items-center gap-1 text-sm text-gray-400 hover:text-accent transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
               Reset
@@ -87,7 +89,7 @@ function App() {
             max="100"
             value={intensity}
             onChange={(e) => setIntensity(parseInt(e.target.value))}
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-purple-500"
+            className="w-full h-2 bg-primary/20 rounded-lg appearance-none cursor-pointer accent-accent"
           />
         </div>
 
