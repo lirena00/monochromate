@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Power, Sliders, Shield, X } from "lucide-react";
+import { Power, Sliders, Shield, X, Heart, Github } from "lucide-react";
 
-// Add these icons from a local icons file or use an icon library
 const Icons = {
   Power: () => <Power size={20} />,
   Adjust: () => <Sliders size={20} />,
   Shield: () => <Shield size={20} />,
   X: () => <X size={15} />,
+  Heart: () => <Heart size={15} color="red" />,
+  Github: () => <Github size={15} />,
 };
 
 export default function App() {
@@ -36,10 +37,10 @@ export default function App() {
   };
 
   return (
-    <div className="w-[400px] min-h-[500px] bg-white text-gray-800 p-6">
+    <div className="w-[400px] min-h-[500px] bg-white text-gray-800 p-6 flex flex-col">
       <h1 className="text-2xl font-bold mb-6">Monochromate</h1>
 
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-4 flex-1">
         <div className="bg-gray-100 border-gray-300 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -142,6 +143,27 @@ export default function App() {
             Add Current Site →
           </button>
         </div>
+      </div>
+      <div className="mt-6 text-center flex items-center justify-center gap-4">
+        <a
+          href="https://buymeacoffee.com/lirena00"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-1"
+        >
+          <Icons.Heart />
+          Support me
+        </a>
+        <span className="text-gray-400">|</span>
+        <a
+          href="https://github.com/lirena00/monochromate"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-1"
+        >
+          <Icons.Github />
+          Github
+        </a>
       </div>
     </div>
   );
