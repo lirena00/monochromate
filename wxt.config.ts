@@ -14,6 +14,6 @@ export default defineConfig({
     version: "1.0.0",
     description:
       "An extension that greyscales the webpage to reduce doomscrolling",
-    permissions: ["storage", "activeTab", "sidePanel"],
+    permissions: ["storage", "activeTab"],
   },
 });

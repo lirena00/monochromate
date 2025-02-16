@@ -1,4 +1,4 @@
-# 🌓 Monochromate
+# Monochromate
 
 A sleek browser extension that turns your web browsing experience into grayscale, helping reduce digital distractions and avoid doomscrolling.
 
@@ -11,27 +11,55 @@ A sleek browser extension that turns your web browsing experience into grayscale
 - **Intensity Control** - Fine-tune the grayscale effect (0-100%)
 - **Site Exclusions** - Maintain a blacklist of sites where color should remain enabled
 - **Real-time Updates** - Changes apply instantly without page refresh
-- **Minimal Interface** - Clean, modern UI with dark mode support
+- **Minimal Interface** - Clean, modern UI
 
-## 🛠️ Development
+## 🛠️ **Development**
+
+### **Setup & Run**
+
+Clone the repository and install dependencies:
 
 ```bash
-# Start development server
-npm dev
+git clone https://github.com/your-username/monochromate.git
+cd monochromate
+npm install
+```
 
-# Build for production
+Start the development server with:
+
+```bash
+npm dev
+```
+
+This will build the extension in **watch mode**, so changes automatically reflect when reloaded in the browser.
+
+### **Building for Production**
+
+To generate an optimized build:
+
+```bash
 npm build
 ```
 
-## 🤝 Contributing
+This creates a final version inside the `dist/` folder, ready for submission to the Chrome Web Store and Mozilla Add-ons.
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+> for more detailed installation visit [WXT Guide](https://wxt.dev/guide/introduction.html)
+
+## 🤝 **Contributing**
+
+Want to improve **Monochromate**? Contributions are always welcome!
+
+### **How to Contribute**
+
+1. **Fork** the repository
+2. **Create a new branch**: `git checkout -b feature-name`
+3. **Make your changes**
+4. **Commit & push**: `git commit -m "Added new feature"`
+5. **Open a Pull Request** 🎉
 
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
 
 <div align="center">
 Made with ♥️ for a more focused web
