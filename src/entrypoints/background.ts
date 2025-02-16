@@ -8,11 +8,7 @@ export default defineBackground(() => {
           blacklist: ["localhost"],
         },
       });
-    }
-  });
-
-  browser.storage.local.get("Monofilter").then((data) => {
-    if (data.Monofilter?.enabled) {
+    } else if (data.Monofilter.enabled) {
       applyGreyscaleToAllTabs(data.Monofilter.intensity ?? 100);
     }
   });

@@ -36,11 +36,10 @@ export default function App() {
   };
 
   return (
-    <div className="w-[400px] min-h-[600px] bg-white text-gray-800 p-6">
+    <div className="w-[400px] min-h-[500px] bg-white text-gray-800 p-6">
       <h1 className="text-2xl font-bold mb-6">Monochromate</h1>
 
       <div className="grid grid-cols-1 gap-4">
-    
         <div className="bg-gray-100 border-gray-300 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -85,7 +84,6 @@ export default function App() {
           <div className="text-right text-sm text-gray-600">{intensity}%</div>
         </div>
 
-     
         <div className="bg-gray-100 border-gray-300 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="flex items-center gap-3 mb-3">
             <Icons.Shield />

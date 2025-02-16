@@ -25,17 +25,17 @@ export default defineContentScript({
 
     browser.storage.onChanged.addListener((changes) => {
       if (changes.Monofilter) {
-        const data = changes.Monofilter.newValue;
+        const {
+          enabled,
+          intensity,
+          blacklist = [],
+        } = changes.Monofilter.newValue ?? {};
         const currentSite = getCurrentHostname();
-        const blacklist = data?.blacklist ?? [];
 
-        if (data?.enabled && !blacklist.includes(currentSite)) {
-          document.documentElement.style.filter = `grayscale(${
-            data.intensity ?? 100
-          }%)`;
-        } else {
-          document.documentElement.style.filter = "";
-        }
+        document.documentElement.style.filter =
+          enabled && !blacklist.includes(currentSite)
+            ? `grayscale(${intensity ?? 100}%)`
+            : "";
       }
     });
   },
