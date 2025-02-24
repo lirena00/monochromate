@@ -90,7 +90,24 @@ export default defineBackground(() => {
               browser.scripting.executeScript({
                 target: { tabId: tab.id },
                 func: (intensity: number) => {
-                  document.documentElement.style.filter = `grayscale(${intensity}%)`;
+                  let overlay = document.getElementById("monochromate-overlay");
+                  if (!overlay) {
+                    overlay = document.createElement("div");
+                    overlay.id = "monochromate-overlay";
+                    overlay.style.cssText = `
+                      position: fixed;
+                      top: 0;
+                      left: 0;
+                      width: 100vw;
+                      height: 100vh;
+                      pointer-events: none;
+                      z-index: 100;
+                      backdrop-filter: grayscale(${intensity}%);
+                    `;
+                    document.documentElement.appendChild(overlay);
+                  } else {
+                    overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                  }
                 },
                 args: [intensity],
               });
@@ -108,7 +125,10 @@ export default defineBackground(() => {
           browser.scripting.executeScript({
             target: { tabId: tab.id },
             func: () => {
-              document.documentElement.style.filter = "";
+              const overlay = document.getElementById("monochromate-overlay");
+              if (overlay) {
+                overlay.remove();
+              }
             },
           });
         }

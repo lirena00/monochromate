@@ -37,7 +37,7 @@ export default function App() {
   };
 
   return (
-    <div className="w-[400px] min-h-[500px] bg-white text-gray-800 p-6 flex flex-col">
+    <div className="w-[400px] min-h-[550px] bg-white text-gray-800 p-6 flex flex-col">
       <h1 className="text-2xl font-bold mb-6">Monochromate</h1>
 
       <div className="grid grid-cols-1 gap-4 flex-1">
@@ -89,12 +89,14 @@ export default function App() {
           <div className="flex items-center gap-3 mb-3">
             <Icons.Shield />
             <div>
-              <h2 className="font-semibold">Excluded Sites</h2>
+              <h2 className="font-semibold">
+                Excluded Sites {blacklist.length > 0 && `(${blacklist.length})`}
+              </h2>
               <p className="text-sm text-gray-600 italic">Manage exceptions</p>
             </div>
           </div>
 
-          <div className="max-h-[200px] overflow-y-auto">
+          <div className="max-h-[80px] overflow-y-auto">
             {blacklist.map((site, index) => (
               <div
                 key={index}

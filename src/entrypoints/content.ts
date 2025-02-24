@@ -1,24 +1,48 @@
-import "~/assets/main.css";
 import { ContentScriptContext } from "wxt/client";
 
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
 };
 
+const createOrUpdateOverlay = (intensity: number) => {
+  let overlay = document.getElementById("monochromate-overlay");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "monochromate-overlay";
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      pointer-events: none;
+      z-index: 2147483647;
+      backdrop-filter: grayscale(${intensity}%);
+    `;
+    document.documentElement.appendChild(overlay);
+  } else {
+    overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+  }
+};
+
+const removeOverlay = () => {
+  const overlay = document.getElementById("monochromate-overlay");
+  if (overlay) {
+    overlay.remove();
+  }
+};
+
 export default defineContentScript({
   matches: ["<all_urls>"],
   async main(ctx: ContentScriptContext) {
     browser.storage.local.get("Monofilter").then((data) => {
+      if (!data.Monofilter?.enabled) return;
       if (data.Monofilter?.enabled) {
         const currentSite = getCurrentHostname();
         const blacklist = data.Monofilter.blacklist ?? [];
 
         if (!blacklist.includes(currentSite)) {
-          document.documentElement.style.filter = `grayscale(${
-            data.Monofilter.intensity ?? 100
-          }%)`;
-        } else {
-          document.documentElement.style.filter = "";
+          createOrUpdateOverlay(data.Monofilter.intensity ?? 100);
         }
       }
     });
@@ -32,10 +56,11 @@ export default defineContentScript({
         } = changes.Monofilter.newValue ?? {};
         const currentSite = getCurrentHostname();
 
-        document.documentElement.style.filter =
-          enabled && !blacklist.includes(currentSite)
-            ? `grayscale(${intensity ?? 100}%)`
-            : "";
+        if (enabled && !blacklist.includes(currentSite)) {
+          createOrUpdateOverlay(intensity ?? 100);
+        } else {
+          removeOverlay();
+        }
       }
     });
   },
