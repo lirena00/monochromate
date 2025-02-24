@@ -6,14 +6,14 @@ export default defineConfig({
   outDir: "dist",
   extensionApi: "chrome",
   runner: {
-    startUrls: ["https://www.gogle.com/"],
+    startUrls: ["https://www.google.com/"],
   },
   modules: ["@wxt-dev/module-react"],
   manifest: {
     name: "Monochromate",
-    version: "1.0.1",
+    version: "1.0.2",
     description:
       "An extension that greyscales the webpage to reduce doomscrolling",
-    permissions: ["storage", "scripting"],
+    permissions: ["storage", "activeTab", "scripting"],
   },
 });
