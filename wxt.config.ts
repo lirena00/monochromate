@@ -6,7 +6,7 @@ export default defineConfig({
   outDir: "dist",
   extensionApi: "chrome",
   runner: {
-    startUrls: ["https://www.google.com/"],
+    startUrls: ["https://www.gogle.com/"],
   },
   modules: ["@wxt-dev/module-react"],
   manifest: {
