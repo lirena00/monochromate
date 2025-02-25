@@ -27,3 +27,7 @@ web-ext.config.ts
 
 dist
 dist/*
+
+.env
+.env.*
+!.env.example
