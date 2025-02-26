@@ -37,24 +37,33 @@ export default function App() {
   };
 
   return (
-    <div className="w-[400px] min-h-[550px] bg-white text-gray-800 p-6 flex flex-col">
-      <h1 className="text-2xl font-bold mb-6">Monochromate</h1>
+    <div className="w-[400px] min-h-[550px] bg-white text-neutral-800 p-6 flex flex-col">
+      <div className="flex items-center gap-3 mb-6">
+        <img src="/logo.png" alt="Monochromate Logo" className="h-8 w-8" />
+        <h1 className="text-2xl font-bold text-neutral-800">Monochromate</h1>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 flex-1">
-        <div className="bg-gray-100 border-gray-300 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4  hover:border-neutral-400 transition-all">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Icons.Power />
+              <div className="text-neutral-700">
+                <Icons.Power />
+              </div>
               <div>
-                <h2 className="font-semibold">Greyscale Filter</h2>
-                <p className="text-sm text-gray-600 italic">
+                <h2 className="font-semibold text-neutral-800">
+                  Greyscale Filter
+                </h2>
+                <p className="text-sm text-neutral-500 italic">
                   Toggle monochrome mode
                 </p>
               </div>
             </div>
             <button
               className={`px-4 py-2 rounded-lg transition-colors ${
-                enabled ? "bg-black text-white" : "bg-gray-200"
+                enabled
+                  ? "bg-neutral-900 text-neutral-50 hover:bg-neutral-800 active:bg-neutral-950"
+                  : "bg-neutral-100 text-neutral-700 border border-neutral-300 hover:bg-neutral-200 hover:border-neutral-400"
               }`}
               onClick={toggleGreyscale}
             >
@@ -63,12 +72,16 @@ export default function App() {
           </div>
         </div>
 
-        <div className="bg-gray-100 border-gray-300 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4  hover:border-neutral-400 transition-all">
           <div className="flex items-center gap-3 mb-3">
-            <Icons.Adjust />
+            <div className="text-neutral-700">
+              <Icons.Adjust />
+            </div>
             <div>
-              <h2 className="font-semibold">Filter Intensity</h2>
-              <p className="text-sm text-gray-600 italic">
+              <h2 className="font-semibold text-neutral-800">
+                Filter Intensity
+              </h2>
+              <p className="text-sm text-neutral-500 italic">
                 Adjust the strength
               </p>
             </div>
@@ -80,19 +93,30 @@ export default function App() {
             value={intensity}
             onChange={changeIntensity}
             disabled={!enabled}
-            className="w-full accent-black"
+            className="w-full accent-neutral-900"
           />
-          <div className="text-right text-sm text-gray-600">{intensity}%</div>
+          <div className="text-right text-sm text-neutral-500">
+            {intensity}%
+          </div>
         </div>
 
-        <div className="bg-gray-100 border-gray-300 border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
+        <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4  hover:border-neutral-400 transition-all">
           <div className="flex items-center gap-3 mb-3">
-            <Icons.Shield />
+            <div className="text-neutral-700">
+              <Icons.Shield />
+            </div>
             <div>
-              <h2 className="font-semibold">
-                Excluded Sites {blacklist.length > 0 && `(${blacklist.length})`}
+              <h2 className="font-semibold text-neutral-800">
+                Excluded Sites{" "}
+                {blacklist.length > 0 && (
+                  <span className="ml-1 px-2 py-0.5 text-xs bg-neutral-100 rounded-full">
+                    {blacklist.length}
+                  </span>
+                )}
               </h2>
-              <p className="text-sm text-gray-600 italic">Manage exceptions</p>
+              <p className="text-sm text-neutral-500 italic">
+                Manage exceptions
+              </p>
             </div>
           </div>
 
@@ -100,9 +124,9 @@ export default function App() {
             {blacklist.map((site, index) => (
               <div
                 key={index}
-                className="flex justify-between items-center py-2 border-b border-gray-200 last:border-0"
+                className="flex justify-between items-center py-2 border-b border-neutral-200 last:border-0"
               >
-                <span className="text-sm">{site}</span>
+                <span className="text-sm text-neutral-700">{site}</span>
                 <button
                   onClick={() => {
                     const newBlacklist = blacklist.filter(
@@ -114,7 +138,7 @@ export default function App() {
                       value: newBlacklist,
                     });
                   }}
-                  className="text-red-500 hover:text-red-700 text-sm"
+                  className="text-red-500 hover:text-red-600 text-sm"
                 >
                   <Icons.X />
                 </button>
@@ -140,7 +164,7 @@ export default function App() {
                 }
               }
             }}
-            className="w-full mt-3 text-white px-4 py-2 bg-black hover:bg-black/80 rounded-lg text-sm transition-colors"
+            className="w-full mt-3 text-neutral-50 px-4 py-2 bg-neutral-900 hover:bg-neutral-800 active:bg-neutral-950 rounded-lg text-sm transition-colors"
           >
             Add Current Site →
           </button>
@@ -151,20 +175,33 @@ export default function App() {
           href="https://buymeacoffee.com/lirena00"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-1"
+          className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
         >
-          <Icons.Heart />
+          <span className="text-red-500">
+            <Icons.Heart />
+          </span>
           Support me
         </a>
-        <span className="text-gray-400">|</span>
+        <span className="text-neutral-300">|</span>
         <a
           href="https://github.com/lirena00/monochromate"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-gray-600 hover:text-gray-800 transition-colors inline-flex items-center gap-1"
+          className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
         >
           <Icons.Github />
           Github
+        </a>
+        <span className="text-neutral-300">|</span>
+        <a
+          target="_blank"
+          rel="noopener noreferrer"
+          href={`https://monochromate.lirena.in/release-notes/#${
+            browser.runtime.getManifest().version
+          }`}
+          className="text-sm text-gray-600 hover:text-neutral-900 transition-colors"
+        >
+          v.{browser.runtime.getManifest().version}
         </a>
       </div>
     </div>
