@@ -13,7 +13,7 @@ export default defineConfig({
     name: "Monochromate",
     version: "1.0.2",
     description:
-      "A browser extension that applies a grayscale filter to websites, reducing eye strain and helping prevent doomscrolling. Customize intensity, exclude sites, and browse more mindfully.",
+      "An extension that greyscales the webpage to reduce doomscrolling",
     permissions: ["storage", "activeTab", "scripting"],
   },
 });
