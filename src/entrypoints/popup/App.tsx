@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import {
   Power,
   Sliders,
@@ -13,6 +13,7 @@ import {
   ArrowLeft,
   Plus,
 } from "lucide-react";
+import "./App.css";
 
 const Icons = {
   Power: () => <Power size={20} />,
@@ -36,8 +37,6 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
   const [isCurrentUrlBlacklisted, setIsCurrentUrlBlacklisted] = useState(false);
-  const [isBlacklistExpanded, setIsBlacklistExpanded] = useState(false);
-  const blacklistRef = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<"main" | "blacklist">("main");
 
   useEffect(() => {
@@ -49,7 +48,6 @@ export default function App() {
       }
     });
 
-    // Get current URL
     browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       if (tabs[0]?.url) {
         const url = new URL(tabs[0].url).hostname.replace("www.", "");
@@ -57,7 +55,7 @@ export default function App() {
         setIsCurrentUrlBlacklisted(blacklist.includes(url));
       }
     });
-  }, []);
+  }, [blacklist]);
 
   const toggleGreyscale = () => {
     setEnabled(!enabled);
