@@ -2,8 +2,11 @@
 
 A sleek browser extension that turns your web browsing experience into grayscale, helping reduce digital distractions and avoid doomscrolling.
 
-![Version](https://img.shields.io/badge/version-1.0.0-black)
-![License](https://img.shields.io/badge/license-MIT-gray)
+![Version](https://img.shields.io/badge/version-1.1.0-black)
+![License](https://img.shields.io/badge/license-MIT-black)
+
+| [![Chrome](./src/public/chrome_badge.svg)](https://chromewebstore.google.com/detail/monochromate/hafcajcllbjnoolpfngclfmmgpikdhlm) | [![Firefox](./src/public/firefox_badge.svg)](https://addons.mozilla.org/en-US/firefox/addon/monochromate/) |
+| :--------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------: |
 
 ## ✨ Features
 
@@ -38,7 +41,8 @@ This will build the extension in **watch mode**, so changes automatically reflec
 To generate an optimized build:
 
 ```bash
-npm build
+npm zip
+npm zip:firefox
 ```
 
 This creates a final version inside the `dist/` folder, ready for submission to the Chrome Web Store and Mozilla Add-ons.
