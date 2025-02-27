@@ -11,7 +11,6 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowLeft,
-  Plus,
 } from "lucide-react";
 import "./App.css";
 
@@ -22,7 +21,6 @@ const Icons = {
   X: () => <X size={15} />,
   Heart: () => <Heart size={15} color="red" />,
   Github: () => <Github size={15} />,
-  Plus: () => <Plus size={15} />,
   Search: () => <Search size={15} />,
   AlertCircle: () => <AlertCircle size={15} />,
   ChevronDown: () => <ChevronDown size={15} />,
@@ -105,7 +103,7 @@ export default function App() {
     <div className="w-[400px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
       {view === "main" ? (
         <>
-          <div className="flex items-center gap-3 mb-6">
+          <div className="flex items-center gap-1 mb-6">
             <img src="/logo.png" alt="Monochromate Logo" className="h-8 w-8" />
             <h1 className="text-2xl font-bold text-neutral-800">
               Monochromate
