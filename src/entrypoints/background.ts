@@ -101,12 +101,12 @@ export default defineBackground(() => {
                       width: 100vw;
                       height: 100vh;
                       pointer-events: none;
-                      z-index: 100;
-                      backdrop-filter: grayscale(${intensity}%) !important;
+                       z-index: 2147483647;
+                      backdrop-filter: grayscale(${intensity}%) ;
                     `;
                     document.documentElement.appendChild(overlay);
                   } else {
-                    overlay.style.backdropFilter = `grayscale(${intensity}%) !important`;
+                    overlay.style.backdropFilter = `grayscale(${intensity}%)`;
                   }
                 },
                 args: [intensity],

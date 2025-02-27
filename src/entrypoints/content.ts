@@ -17,11 +17,11 @@ const createOrUpdateOverlay = (intensity: number) => {
       height: 100vh;
       pointer-events: none;
       z-index: 2147483647;
-      backdrop-filter: grayscale(${intensity}%) !important;
+      backdrop-filter: grayscale(${intensity}%) ;
     `;
     document.documentElement.appendChild(overlay);
   } else {
-    overlay.style.backdropFilter = `grayscale(${intensity}%) !important`;
+    overlay.style.backdropFilter = `grayscale(${intensity}%) `;
   }
 };
 
