@@ -5,8 +5,14 @@ A sleek browser extension that turns your web browsing experience into grayscale
 ![Version](https://img.shields.io/badge/version-1.1.0-black)
 ![License](https://img.shields.io/badge/license-MIT-black)
 
-| [![Chrome](./src/public/chrome_badge.svg)](https://chromewebstore.google.com/detail/monochromate/hafcajcllbjnoolpfngclfmmgpikdhlm) | [![Firefox](./src/public/firefox_badge.svg)](https://addons.mozilla.org/en-US/firefox/addon/monochromate/) |
-| :--------------------------------------------------------------------------------------------------------------------------------: | :--------------------------------------------------------------------------------------------------------: |
+<p align="center">
+  <a href="https://chromewebstore.google.com/detail/monochromate/hafcajcllbjnoolpfngclfmmgpikdhlm">
+    <img src="./src/public/chrome_badge.svg" alt="Chrome" />
+  </a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/monochromate/">
+    <img src="./src/public/firefox_badge.svg" alt="Firefox" />
+  </a>
+</p>
 
 ## ✨ Features
 
