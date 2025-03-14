@@ -39,11 +39,9 @@ export default function App() {
 
   useEffect(() => {
     browser.storage.local.get("Monofilter").then((data) => {
-      if (data.Monofilter) {
-        setEnabled(data.Monofilter.enabled);
-        setIntensity(data.Monofilter.intensity ?? 100);
-        setBlacklist(data.Monofilter.blacklist ?? []);
-      }
+      setEnabled(data.Monofilter.enabled);
+      setIntensity(data.Monofilter.intensity ?? 100);
+      setBlacklist(data.Monofilter.blacklist ?? []);
     });
 
     browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {

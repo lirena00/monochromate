@@ -3,13 +3,16 @@ export default defineBackground(() => {
     if (!data.Monofilter) {
       browser.storage.local.set({
         Monofilter: {
-          enabled: false,
+          enabled: true,
           intensity: 100,
           blacklist: ["localhost"],
         },
       });
     } else if (data.Monofilter.enabled) {
-      applyGreyscaleToAllTabs(data.Monofilter.intensity ?? 100);
+      applyGreyscaleToAllTabs(
+        data.Monofilter.intensity ?? 100,
+        data.Monofilter.blacklist
+      );
     }
   });
 
@@ -30,7 +33,7 @@ export default defineBackground(() => {
             },
           });
         } else {
-          applyGreyscaleToAllTabs(intensity);
+          applyGreyscaleToAllTabs(intensity, blacklist);
           browser.storage.local.set({
             Monofilter: {
               ...currentSettings,
@@ -70,31 +73,31 @@ export default defineBackground(() => {
         });
 
         if (currentSettings.enabled) {
-          applyGreyscaleToAllTabs(currentSettings.intensity);
+          applyGreyscaleToAllTabs(currentSettings.intensity, newBlacklist);
         }
       });
     }
   });
 
-  function applyGreyscaleToAllTabs(intensity: number) {
-    browser.storage.local.get("Monofilter").then((data) => {
-      const blacklist = data.Monofilter?.blacklist ?? [];
+  function applyGreyscaleToAllTabs(
+    intensity: number,
+    blacklist: string[] = []
+  ) {
+    browser.tabs.query({}).then((tabs) => {
+      tabs.forEach((tab) => {
+        if (tab.id && tab.url) {
+          const url = new URL(tab.url);
+          const domain = url.hostname.replace("www.", "");
 
-      browser.tabs.query({}).then((tabs) => {
-        tabs.forEach((tab) => {
-          if (tab.id && tab.url) {
-            const url = new URL(tab.url);
-            const domain = url.hostname.replace("www.", "");
-
-            if (!blacklist.includes(domain)) {
-              browser.scripting.executeScript({
-                target: { tabId: tab.id },
-                func: (intensity: number) => {
-                  let overlay = document.getElementById("monochromate-overlay");
-                  if (!overlay) {
-                    overlay = document.createElement("div");
-                    overlay.id = "monochromate-overlay";
-                    overlay.style.cssText = `
+          if (!blacklist.includes(domain)) {
+            browser.scripting.executeScript({
+              target: { tabId: tab.id },
+              func: (intensity: number) => {
+                let overlay = document.getElementById("monochromate-overlay");
+                if (!overlay) {
+                  overlay = document.createElement("div");
+                  overlay.id = "monochromate-overlay";
+                  overlay.style.cssText = `
                       position: fixed;
                       top: 0;
                       left: 0;
@@ -104,16 +107,15 @@ export default defineBackground(() => {
                        z-index: 2147483647;
                       backdrop-filter: grayscale(${intensity}%) ;
                     `;
-                    document.documentElement.appendChild(overlay);
-                  } else {
-                    overlay.style.backdropFilter = `grayscale(${intensity}%)`;
-                  }
-                },
-                args: [intensity],
-              });
-            }
+                  document.documentElement.appendChild(overlay);
+                } else {
+                  overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                }
+              },
+              args: [intensity],
+            });
           }
-        });
+        }
       });
     });
   }
