@@ -4,63 +4,61 @@ const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
 };
 
-const createOrUpdateOverlay = (intensity: number) => {
-  let overlay = document.getElementById("monochromate-overlay");
-  if (!overlay) {
-    overlay = document.createElement("div");
-    overlay.id = "monochromate-overlay";
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 2147483647;
-      backdrop-filter: grayscale(${intensity}%) ;
-    `;
-    document.documentElement.appendChild(overlay);
-  } else {
-    overlay.style.backdropFilter = `grayscale(${intensity}%) `;
-  }
-};
+// Cache DOM nodes and reduce layout operations
+let overlayElement: HTMLDivElement | null = null;
 
-const removeOverlay = () => {
-  const overlay = document.getElementById("monochromate-overlay");
-  if (overlay) {
-    overlay.remove();
+// Use a single function to manage the overlay with efficient updates
+const updateOverlay = (show: boolean, intensity: number = 100) => {
+  if (show) {
+    if (!overlayElement) {
+      overlayElement = document.createElement("div");
+      overlayElement.id = "monochromate-overlay";
+      // Set all styles at once to reduce style recalculations
+      overlayElement.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        pointer-events: none;
+        z-index: 100000;
+        backdrop-filter: grayscale(${intensity}%);
+      `;
+      document.documentElement.appendChild(overlayElement);
+    } else {
+      // Only update the property that changed
+      overlayElement.style.backdropFilter = `grayscale(${intensity}%)`;
+    }
+  } else if (overlayElement) {
+    overlayElement.remove();
+    overlayElement = null;
   }
 };
 
 export default defineContentScript({
   matches: ["<all_urls>"],
   async main(ctx: ContentScriptContext) {
-    browser.storage.local.get("Monofilter").then((data) => {
-      if (!data.Monofilter?.enabled) return;
-      if (data.Monofilter?.enabled) {
-        const currentSite = getCurrentHostname();
-        const blacklist = data.Monofilter.blacklist ?? [];
+    const currentSite = getCurrentHostname();
 
-        if (!blacklist.includes(currentSite)) {
-          createOrUpdateOverlay(data.Monofilter.intensity ?? 100);
-        }
+    // Get initial settings
+    browser.storage.local.get("Monofilter").then((data) => {
+      const settings = data.Monofilter;
+      if (!settings?.enabled) return;
+
+      const blacklist = settings.blacklist || [];
+      if (!blacklist.includes(currentSite)) {
+        updateOverlay(true, settings.intensity || 100);
       }
     });
 
+    // Listen for settings changes
     browser.storage.onChanged.addListener((changes) => {
       if (changes.Monofilter) {
-        const {
-          enabled,
-          intensity,
-          blacklist = [],
-        } = changes.Monofilter.newValue ?? {};
-        const currentSite = getCurrentHostname();
+        const newValue = changes.Monofilter.newValue || {};
+        const { enabled = false, intensity = 100, blacklist = [] } = newValue;
 
-        if (enabled && !blacklist.includes(currentSite)) {
-          createOrUpdateOverlay(intensity ?? 100);
-        } else {
-          removeOverlay();
-        }
+        const shouldShowOverlay = enabled && !blacklist.includes(currentSite);
+        updateOverlay(shouldShowOverlay, intensity);
       }
     });
   },

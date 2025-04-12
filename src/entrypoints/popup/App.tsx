@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Power,
   Sliders,
@@ -12,6 +12,7 @@ import {
   ChevronUp,
   ArrowLeft,
 } from "lucide-react";
+import { Discord } from "@/components/Icons/Discord";
 import "./App.css";
 
 const Icons = {
@@ -26,6 +27,24 @@ const Icons = {
   ChevronDown: () => <ChevronDown size={15} />,
   ChevronUp: () => <ChevronUp size={15} />,
   ArrowLeft: () => <ArrowLeft size={18} />,
+  Discord: () => <Discord />,
+};
+
+// Debounce helper function
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 };
 
 export default function App() {
@@ -34,9 +53,29 @@ export default function App() {
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
-  const [isCurrentUrlBlacklisted, setIsCurrentUrlBlacklisted] = useState(false);
   const [view, setView] = useState<"main" | "blacklist">("main");
 
+  // Debounce search term to avoid excessive filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Memoize derived state
+  const isCurrentUrlBlacklisted = useMemo(
+    () => blacklist.includes(currentUrl),
+    [blacklist, currentUrl]
+  );
+
+  // Memoize filtered blacklist to avoid recalculation on every render
+  const filteredBlacklist = useMemo(
+    () =>
+      debouncedSearchTerm
+        ? blacklist.filter((site) =>
+            site.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+          )
+        : blacklist,
+    [blacklist, debouncedSearchTerm]
+  );
+
+  // Load initial data only once
   useEffect(() => {
     browser.storage.local.get("Monofilter").then((data) => {
       if (data.Monofilter) {
@@ -46,58 +85,75 @@ export default function App() {
       }
     });
 
+    // Listen for storage changes to keep UI in sync
+    const storageListener = (changes: any) => {
+      if (changes.Monofilter) {
+        const newValue = changes.Monofilter.newValue;
+        if (newValue) {
+          setEnabled(newValue.enabled);
+          setIntensity(newValue.intensity ?? 100);
+          setBlacklist(newValue.blacklist ?? []);
+        }
+      }
+    };
+
+    browser.storage.onChanged.addListener(storageListener);
+    return () => browser.storage.onChanged.removeListener(storageListener);
+  }, []);
+
+  // Get current URL only once
+  useEffect(() => {
     browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       if (tabs[0]?.url) {
         const url = new URL(tabs[0].url).hostname.replace("www.", "");
         setCurrentUrl(url);
-        setIsCurrentUrlBlacklisted(blacklist.includes(url));
       }
     });
-  }, [blacklist]);
+  }, []);
 
-  const toggleGreyscale = () => {
-    setEnabled(!enabled);
+  const toggleGreyscale = useCallback(() => {
+    const newEnabled = !enabled;
+    setEnabled(newEnabled);
     browser.runtime.sendMessage({ type: "toggleGreyscale", intensity });
-  };
+  }, [enabled, intensity]);
 
-  const changeIntensity = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newIntensity = parseInt(e.target.value, 10);
-    setIntensity(newIntensity);
-    browser.runtime.sendMessage({ type: "setIntensity", value: newIntensity });
-  };
+  const changeIntensity = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newIntensity = parseInt(e.target.value, 10);
+      setIntensity(newIntensity);
+      browser.runtime.sendMessage({
+        type: "setIntensity",
+        value: newIntensity,
+      });
+    },
+    []
+  );
 
-  const addCurrentSite = async () => {
+  const addCurrentSite = useCallback(async () => {
     if (!currentUrl || blacklist.includes(currentUrl)) return;
 
     const newBlacklist = [...blacklist, currentUrl];
-    setBlacklist(newBlacklist);
-    setIsCurrentUrlBlacklisted(true);
     browser.runtime.sendMessage({
       type: "setBlacklist",
       value: newBlacklist,
     });
-  };
+  }, [currentUrl, blacklist]);
 
-  const removeSite = (site: string) => {
-    const newBlacklist = blacklist.filter((s) => s !== site);
-    setBlacklist(newBlacklist);
-    if (site === currentUrl) {
-      setIsCurrentUrlBlacklisted(false);
-    }
-    browser.runtime.sendMessage({
-      type: "setBlacklist",
-      value: newBlacklist,
-    });
-  };
-
-  const filteredBlacklist = blacklist.filter((site) =>
-    site.toLowerCase().includes(searchTerm.toLowerCase())
+  const removeSite = useCallback(
+    (site: string) => {
+      const newBlacklist = blacklist.filter((s) => s !== site);
+      browser.runtime.sendMessage({
+        type: "setBlacklist",
+        value: newBlacklist,
+      });
+    },
+    [blacklist]
   );
 
-  const handleReturnToMain = () => {
+  const handleReturnToMain = useCallback(() => {
     setView("main");
     setSearchTerm("");
-  };
+  }, []);
 
   return (
     <div className="w-[400px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
@@ -137,35 +193,6 @@ export default function App() {
                 >
                   {enabled ? "Active" : "Inactive"}
                 </button>
-              </div>
-            </div>
-
-            {/* Intensity Card */}
-            <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="text-neutral-700">
-                  <Icons.Adjust />
-                </div>
-                <div>
-                  <h2 className="font-semibold text-neutral-800">
-                    Filter Intensity
-                  </h2>
-                  <p className="text-sm text-neutral-500 italic">
-                    Adjust the strength
-                  </p>
-                </div>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={intensity}
-                onChange={changeIntensity}
-                disabled={!enabled}
-                className="w-full accent-neutral-900"
-              />
-              <div className="text-right text-sm text-neutral-500">
-                {intensity}%
               </div>
             </div>
 
@@ -232,6 +259,35 @@ export default function App() {
                 Manage all excluded sites
               </button>
             </div>
+
+            {/* Intensity Card */}
+            <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="text-neutral-700">
+                  <Icons.Adjust />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-neutral-800">
+                    Filter Intensity
+                  </h2>
+                  <p className="text-sm text-neutral-500 italic">
+                    Adjust the strength
+                  </p>
+                </div>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={intensity}
+                onChange={changeIntensity}
+                disabled={!enabled}
+                className="w-full accent-neutral-900"
+              />
+              <div className="text-right text-sm text-neutral-500">
+                {intensity}%
+              </div>
+            </div>
           </div>
 
           <div className="mt-6 text-center flex items-center justify-center gap-4">
@@ -244,7 +300,17 @@ export default function App() {
               <span className="text-red-500">
                 <Icons.Heart />
               </span>
-              Support me
+              Support
+            </a>
+            <span className="text-neutral-300">|</span>
+            <a
+              href="https://discord.gg/pdxMMNGWCU"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
+            >
+              <Icons.Discord />
+              Discord
             </a>
             <span className="text-neutral-300">|</span>
             <a
