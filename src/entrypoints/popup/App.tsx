@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Power,
   Sliders,
@@ -28,74 +28,130 @@ const Icons = {
   ArrowLeft: () => <ArrowLeft size={18} />,
 };
 
+// Debounce helper function
+const useDebounce = (value: string, delay: number) => {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+};
+
 export default function App() {
   const [enabled, setEnabled] = useState(false);
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
-  const [isCurrentUrlBlacklisted, setIsCurrentUrlBlacklisted] = useState(false);
   const [view, setView] = useState<"main" | "blacklist">("main");
 
+  // Debounce search term to avoid excessive filtering
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Memoize derived state
+  const isCurrentUrlBlacklisted = useMemo(
+    () => blacklist.includes(currentUrl),
+    [blacklist, currentUrl]
+  );
+
+  // Memoize filtered blacklist to avoid recalculation on every render
+  const filteredBlacklist = useMemo(
+    () =>
+      debouncedSearchTerm
+        ? blacklist.filter((site) =>
+            site.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+          )
+        : blacklist,
+    [blacklist, debouncedSearchTerm]
+  );
+
+  // Load initial data only once
   useEffect(() => {
     browser.storage.local.get("Monofilter").then((data) => {
-      setEnabled(data.Monofilter.enabled);
-      setIntensity(data.Monofilter.intensity ?? 100);
-      setBlacklist(data.Monofilter.blacklist ?? []);
+      if (data.Monofilter) {
+        setEnabled(data.Monofilter.enabled);
+        setIntensity(data.Monofilter.intensity ?? 100);
+        setBlacklist(data.Monofilter.blacklist ?? []);
+      }
     });
 
+    // Listen for storage changes to keep UI in sync
+    const storageListener = (changes: any) => {
+      if (changes.Monofilter) {
+        const newValue = changes.Monofilter.newValue;
+        if (newValue) {
+          setEnabled(newValue.enabled);
+          setIntensity(newValue.intensity ?? 100);
+          setBlacklist(newValue.blacklist ?? []);
+        }
+      }
+    };
+
+    browser.storage.onChanged.addListener(storageListener);
+    return () => browser.storage.onChanged.removeListener(storageListener);
+  }, []);
+
+  // Get current URL only once
+  useEffect(() => {
     browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
       if (tabs[0]?.url) {
         const url = new URL(tabs[0].url).hostname.replace("www.", "");
         setCurrentUrl(url);
-        setIsCurrentUrlBlacklisted(blacklist.includes(url));
       }
     });
-  }, [blacklist]);
+  }, []);
 
-  const toggleGreyscale = () => {
-    setEnabled(!enabled);
+  const toggleGreyscale = useCallback(() => {
+    const newEnabled = !enabled;
+    setEnabled(newEnabled);
     browser.runtime.sendMessage({ type: "toggleGreyscale", intensity });
-  };
+  }, [enabled, intensity]);
 
-  const changeIntensity = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newIntensity = parseInt(e.target.value, 10);
-    setIntensity(newIntensity);
-    browser.runtime.sendMessage({ type: "setIntensity", value: newIntensity });
-  };
+  const changeIntensity = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newIntensity = parseInt(e.target.value, 10);
+      setIntensity(newIntensity);
+      browser.runtime.sendMessage({
+        type: "setIntensity",
+        value: newIntensity,
+      });
+    },
+    []
+  );
 
-  const addCurrentSite = async () => {
+  const addCurrentSite = useCallback(async () => {
     if (!currentUrl || blacklist.includes(currentUrl)) return;
 
     const newBlacklist = [...blacklist, currentUrl];
-    setBlacklist(newBlacklist);
-    setIsCurrentUrlBlacklisted(true);
     browser.runtime.sendMessage({
       type: "setBlacklist",
       value: newBlacklist,
     });
-  };
+  }, [currentUrl, blacklist]);
 
-  const removeSite = (site: string) => {
-    const newBlacklist = blacklist.filter((s) => s !== site);
-    setBlacklist(newBlacklist);
-    if (site === currentUrl) {
-      setIsCurrentUrlBlacklisted(false);
-    }
-    browser.runtime.sendMessage({
-      type: "setBlacklist",
-      value: newBlacklist,
-    });
-  };
-
-  const filteredBlacklist = blacklist.filter((site) =>
-    site.toLowerCase().includes(searchTerm.toLowerCase())
+  const removeSite = useCallback(
+    (site: string) => {
+      const newBlacklist = blacklist.filter((s) => s !== site);
+      browser.runtime.sendMessage({
+        type: "setBlacklist",
+        value: newBlacklist,
+      });
+    },
+    [blacklist]
   );
 
-  const handleReturnToMain = () => {
+  const handleReturnToMain = useCallback(() => {
     setView("main");
     setSearchTerm("");
-  };
+  }, []);
 
   return (
     <div className="w-[400px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
