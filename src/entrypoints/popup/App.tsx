@@ -12,6 +12,7 @@ import {
   ChevronUp,
   ArrowLeft,
 } from "lucide-react";
+import { Discord } from "@/components/Icons/Discord";
 import "./App.css";
 
 const Icons = {
@@ -26,6 +27,7 @@ const Icons = {
   ChevronDown: () => <ChevronDown size={15} />,
   ChevronUp: () => <ChevronUp size={15} />,
   ArrowLeft: () => <ArrowLeft size={18} />,
+  Discord: () => <Discord />,
 };
 
 // Debounce helper function
@@ -298,7 +300,17 @@ export default function App() {
               <span className="text-red-500">
                 <Icons.Heart />
               </span>
-              Support me
+              Support
+            </a>
+            <span className="text-neutral-300">|</span>
+            <a
+              href="https://discord.gg/pdxMMNGWCU"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
+            >
+              <Icons.Discord />
+              Discord
             </a>
             <span className="text-neutral-300">|</span>
             <a
