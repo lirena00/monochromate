@@ -4,8 +4,7 @@ import { defineConfig } from "wxt";
 export default defineConfig({
   srcDir: "src",
   outDir: "dist",
-  extensionApi: "chrome",
-  runner: {
+  webExt: {
     startUrls: ["https://www.google.com/"],
   },
   modules: ["@wxt-dev/module-react"],
@@ -14,6 +13,12 @@ export default defineConfig({
     version: "1.2.0",
     description:
       "An extension that greyscales the webpage to reduce doomscrolling",
-    permissions: ["storage", "activeTab", "scripting"],
+    permissions: [
+      "storage",
+      "activeTab",
+      "scripting",
+      "alarms",
+      "notifications",
+    ],
   },
 });
