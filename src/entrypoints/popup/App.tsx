@@ -100,7 +100,7 @@ export default function App() {
           setIntensity(newValue.intensity ?? 100);
           setBlacklist(newValue.blacklist ?? []);
           setStartMonochromate(newValue.scheduleStart ?? "17:00");
-          setEndMonochromate(newValue.scheduleEnd ?? "9:00");
+          setEndMonochromate(newValue.scheduleEnd ?? "09:00");
         }
       }
     };
