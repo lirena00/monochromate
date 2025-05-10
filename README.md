@@ -7,10 +7,10 @@ A sleek browser extension that turns your web browsing experience into grayscale
 
 <p align="center">
   <a href="https://chromewebstore.google.com/detail/monochromate/hafcajcllbjnoolpfngclfmmgpikdhlm">
-    <img src="./src/public/chrome_badge.svg" alt="Chrome" />
+    <img src="./public/chrome_badge.svg" alt="Chrome" />
   </a>
   <a href="https://addons.mozilla.org/en-US/firefox/addon/monochromate/">
-    <img src="./src/public/firefox_badge.svg" alt="Firefox" />
+    <img src="./public/firefox_badge.svg" alt="Firefox" />
   </a>
 </p>
 
