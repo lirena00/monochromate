@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowLeft,
+  AlarmClock,
 } from "lucide-react";
 import { Discord } from "@/components/Icons/Discord";
 import "./App.css";
@@ -19,6 +20,7 @@ const Icons = {
   Power: () => <Power size={20} />,
   Adjust: () => <Sliders size={20} />,
   Shield: () => <Shield size={20} />,
+  AlarmClock: () => <AlarmClock size={20} />,
   X: () => <X size={15} />,
   Heart: () => <Heart size={15} color="red" />,
   Github: () => <Github size={15} />,
@@ -53,6 +55,8 @@ export default function App() {
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
+  const [startMonochromate, setStartMonochromate] = useState("");
+  const [endMonochromate, setEndMonochromate] = useState("");
   const [view, setView] = useState<"main" | "blacklist">("main");
 
   // Debounce search term to avoid excessive filtering
@@ -82,6 +86,8 @@ export default function App() {
         setEnabled(data.Monofilter.enabled);
         setIntensity(data.Monofilter.intensity ?? 100);
         setBlacklist(data.Monofilter.blacklist ?? []);
+        setStartMonochromate(data.Monofilter.scheduleStart ?? "17:00");
+        setEndMonochromate(data.Monofilter.scheduleEnd ?? "9:00");
       }
     });
 
@@ -93,6 +99,8 @@ export default function App() {
           setEnabled(newValue.enabled);
           setIntensity(newValue.intensity ?? 100);
           setBlacklist(newValue.blacklist ?? []);
+          setStartMonochromate(newValue.scheduleStart ?? "17:00");
+          setEndMonochromate(newValue.scheduleEnd ?? "9:00");
         }
       }
     };
@@ -129,6 +137,30 @@ export default function App() {
     []
   );
 
+  const changeStartTime = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newStartTime = e.target.value;
+      setStartMonochromate(newStartTime);
+      browser.runtime.sendMessage({
+        type: "setScheduleStart",
+        value: newStartTime,
+      });
+    },
+    []
+  );
+
+  const changeEndTime = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newEndTime = e.target.value;
+      setEndMonochromate(newEndTime);
+      browser.runtime.sendMessage({
+        type: "setScheduleEnd",
+        value: newEndTime,
+      });
+    },
+    []
+  );
+
   const addCurrentSite = useCallback(async () => {
     if (!currentUrl || blacklist.includes(currentUrl)) return;
 
@@ -156,7 +188,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="w-[400px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
+    <div className="w-[420px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
       {view === "main" ? (
         <>
           <div className="flex items-center gap-1 mb-6">
@@ -238,14 +270,14 @@ export default function App() {
                 {isCurrentUrlBlacklisted ? (
                   <button
                     onClick={() => removeSite(currentUrl)}
-                    className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded hover:bg-neutral-300 transition-colors"
+                    className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded-sm hover:bg-neutral-300 transition-colors"
                   >
                     Remove
                   </button>
                 ) : (
                   <button
                     onClick={addCurrentSite}
-                    className="text-xs px-2 py-1 bg-neutral-900 text-white rounded hover:bg-neutral-800 transition-colors"
+                    className="text-xs px-2 py-1 bg-neutral-900 text-white rounded-sm hover:bg-neutral-800 transition-colors"
                   >
                     Exclude
                   </button>
@@ -258,6 +290,49 @@ export default function App() {
               >
                 Manage all excluded sites
               </button>
+            </div>
+
+            {/* Schedule Card */}
+            <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <div className="text-neutral-700">
+                    <Icons.AlarmClock />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-neutral-800">Schedule</h2>
+                    <p className="text-sm text-neutral-500 italic">
+                      Schedule monochrome mode
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-2 items-center">
+                <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-neutral-500">Start:</span>
+                    <input
+                      type="time"
+                      className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
+                      value={startMonochromate}
+                      onChange={(e) => changeStartTime(e)}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-neutral-500">End:</span>
+                    <input
+                      type="time"
+                      className="bg-transparent border-0 text-sm  text-right focus:outline-hidden"
+                      value={endMonochromate}
+                      onChange={(e) => changeEndTime(e)}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Intensity Card */}
@@ -290,50 +365,58 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-6 text-center flex items-center justify-center gap-4">
-            <a
-              href="https://buymeacoffee.com/lirena00"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
-            >
-              <span className="text-red-500">
-                <Icons.Heart />
-              </span>
-              Support
-            </a>
-            <span className="text-neutral-300">|</span>
-            <a
-              href="https://discord.gg/pdxMMNGWCU"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
-            >
-              <Icons.Discord />
-              Discord
-            </a>
-            <span className="text-neutral-300">|</span>
-            <a
-              href="https://github.com/lirena00/monochromate"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
-            >
-              <Icons.Github />
-              Github
-            </a>
-            <span className="text-neutral-300">|</span>
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href={`https://monochromate.lirena.in/release-notes/#${
-                browser.runtime.getManifest().version
-              }`}
-              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors"
-            >
-              v.{browser.runtime.getManifest().version}
-            </a>
-          </div>
+          <footer className="mt-8 mb-4 pt-4 border-t border-neutral-200">
+            <div className="flex justify-center items-center space-x-5 text-sm">
+              <a
+                href="https://buymeacoffee.com/lirena00"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="text-red-500 group-hover:scale-110 transition-transform">
+                  <Icons.Heart />
+                </span>
+                <span>Support</span>
+              </a>
+
+              <a
+                href="https://discord.gg/pdxMMNGWCU"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="group-hover:scale-110 transition-transform">
+                  <Icons.Discord />
+                </span>
+                <span>Discord</span>
+              </a>
+
+              <a
+                href="https://github.com/lirena00/monochromate"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="group-hover:scale-110 transition-transform">
+                  <Icons.Github />
+                </span>
+                <span>Github</span>
+              </a>
+            </div>
+
+            <div className="my-3 text-center">
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://monochromate.lirena.in/release-notes/#${
+                  browser.runtime.getManifest().version
+                }`}
+                className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors"
+              >
+                v.{browser.runtime.getManifest().version}
+              </a>
+            </div>
+          </footer>
         </>
       ) : (
         <div className="h-full flex flex-col">
@@ -384,14 +467,14 @@ export default function App() {
               {isCurrentUrlBlacklisted ? (
                 <button
                   onClick={() => removeSite(currentUrl)}
-                  className="text-sm px-3 py-1 bg-neutral-200 text-neutral-700 rounded hover:bg-neutral-300 transition-colors"
+                  className="text-sm px-3 py-1 bg-neutral-200 text-neutral-700 rounded-sm hover:bg-neutral-300 transition-colors"
                 >
                   Remove
                 </button>
               ) : (
                 <button
                   onClick={addCurrentSite}
-                  className="text-sm px-3 py-1 bg-neutral-900 text-white rounded hover:bg-neutral-800 transition-colors flex items-center gap-1"
+                  className="text-sm px-3 py-1 bg-neutral-900 text-white rounded-sm hover:bg-neutral-800 transition-colors flex items-center gap-1"
                 >
                   Exclude
                 </button>

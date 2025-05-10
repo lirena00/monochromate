@@ -1,4 +1,4 @@
-import { ContentScriptContext } from "wxt/client";
+import { ContentScriptContext } from "#imports";
 
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");

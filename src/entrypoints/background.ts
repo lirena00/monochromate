@@ -4,6 +4,8 @@ export default defineBackground(() => {
     enabled: false,
     intensity: 100,
     blacklist: ["localhost"],
+    scheduleStart: "17:00",
+    scheduleEnd: "09:00",
   };
 
   // Debounce helper to prevent too frequent tab updates
@@ -130,6 +132,8 @@ export default defineBackground(() => {
         enabled: true,
         intensity: 100,
         blacklist: ["localhost"],
+        scheduleStart: "17:00",
+        scheduleEnd: "09:00",
       });
     } else {
       currentSettings = data.Monofilter;
@@ -139,6 +143,58 @@ export default defineBackground(() => {
           currentSettings.blacklist
         );
       }
+    }
+  });
+
+  const updateScheduleAlarm = () => {
+    browser.alarms.clear("StartMonochromate").then(() => {
+      if (!currentSettings.scheduleStart) return;
+      const [startHours, startMinutes] = currentSettings.scheduleStart
+        .split(":")
+        .map(Number);
+      const startTime = getNextTime(startHours, startMinutes);
+      browser.alarms.create("StartMonochromate", {
+        when: startTime,
+        periodInMinutes: 24 * 60,
+      });
+    });
+
+    browser.alarms.clear("EndMonochromate").then(() => {
+      if (!currentSettings.scheduleEnd) return;
+      const [endHours, endMinutes] = currentSettings.scheduleEnd
+        .split(":")
+        .map(Number);
+      const endTime = getNextTime(endHours, endMinutes);
+      browser.alarms.create("EndMonochromate", {
+        when: endTime,
+        periodInMinutes: 24 * 60,
+      });
+    });
+  };
+
+  // Set initial alarm
+  updateScheduleAlarm();
+
+  function getNextTime(hour: number, minute: number): number {
+    const now = new Date();
+    const target = new Date();
+    target.setHours(hour, minute, 0, 0);
+    if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
+    return target.getTime();
+  }
+
+  browser.alarms.onAlarm.addListener((alarm) => {
+    if (alarm.name === "StartMonochromate") {
+      // Enable greyscale mode
+      updateSettings({ enabled: true });
+      applyGreyscaleToAllTabsDebounced(
+        currentSettings.intensity,
+        currentSettings.blacklist
+      );
+    } else if (alarm.name === "EndMonochromate") {
+      // Disable greyscale mode
+      updateSettings({ enabled: false });
+      disableGreyscaleForAllTabs();
     }
   });
 
@@ -161,6 +217,18 @@ export default defineBackground(() => {
         updateSettings({
           blacklist: message.value,
         });
+        break;
+      case "setScheduleStart":
+        updateSettings({
+          scheduleStart: message.value,
+        });
+        updateScheduleAlarm();
+        break;
+      case "setScheduleEnd":
+        updateSettings({
+          scheduleEnd: message.value,
+        });
+        updateScheduleAlarm();
         break;
     }
   });
