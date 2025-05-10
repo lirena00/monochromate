@@ -188,7 +188,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="w-[400px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
+    <div className="w-[420px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
       {view === "main" ? (
         <>
           <div className="flex items-center gap-1 mb-6">
@@ -365,50 +365,58 @@ export default function App() {
             </div>
           </div>
 
-          <div className="mt-6 text-center flex items-center justify-center gap-4">
-            <a
-              href="https://buymeacoffee.com/lirena00"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
-            >
-              <span className="text-red-500">
-                <Icons.Heart />
-              </span>
-              Support
-            </a>
-            <span className="text-neutral-300">|</span>
-            <a
-              href="https://discord.gg/pdxMMNGWCU"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
-            >
-              <Icons.Discord />
-              Discord
-            </a>
-            <span className="text-neutral-300">|</span>
-            <a
-              href="https://github.com/lirena00/monochromate"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors inline-flex items-center gap-1"
-            >
-              <Icons.Github />
-              Github
-            </a>
-            <span className="text-neutral-300">|</span>
-            <a
-              target="_blank"
-              rel="noopener noreferrer"
-              href={`https://monochromate.lirena.in/release-notes/#${
-                browser.runtime.getManifest().version
-              }`}
-              className="text-sm text-gray-600 hover:text-neutral-900 transition-colors"
-            >
-              v.{browser.runtime.getManifest().version}
-            </a>
-          </div>
+          <footer className="mt-8 mb-4 pt-4 border-t border-neutral-200">
+            <div className="flex justify-center items-center space-x-5 text-sm">
+              <a
+                href="https://buymeacoffee.com/lirena00"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="text-red-500 group-hover:scale-110 transition-transform">
+                  <Icons.Heart />
+                </span>
+                <span>Support</span>
+              </a>
+
+              <a
+                href="https://discord.gg/pdxMMNGWCU"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="group-hover:scale-110 transition-transform">
+                  <Icons.Discord />
+                </span>
+                <span>Discord</span>
+              </a>
+
+              <a
+                href="https://github.com/lirena00/monochromate"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="group-hover:scale-110 transition-transform">
+                  <Icons.Github />
+                </span>
+                <span>Github</span>
+              </a>
+            </div>
+
+            <div className="my-3 text-center">
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://monochromate.lirena.in/release-notes/#${
+                  browser.runtime.getManifest().version
+                }`}
+                className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors"
+              >
+                v.{browser.runtime.getManifest().version}
+              </a>
+            </div>
+          </footer>
         </>
       ) : (
         <div className="h-full flex flex-col">
