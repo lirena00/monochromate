@@ -12,6 +12,7 @@ import {
   ChevronUp,
   ArrowLeft,
   AlarmClock,
+  Loader2,
 } from "lucide-react";
 import { Discord } from "@/components/Icons/Discord";
 import "./App.css";
@@ -30,6 +31,7 @@ const Icons = {
   ChevronUp: () => <ChevronUp size={15} />,
   ArrowLeft: () => <ArrowLeft size={18} />,
   Discord: () => <Discord />,
+  Loader: () => <Loader2 size={24} className="animate-spin" />,
 };
 
 // Debounce helper function
@@ -51,6 +53,7 @@ const useDebounce = (value: string, delay: number) => {
 
 export default function App() {
   const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -78,25 +81,45 @@ export default function App() {
         : blacklist,
     [blacklist, debouncedSearchTerm]
   );
-
   // Load initial data only once
   useEffect(() => {
-    browser.storage.local.get("Monofilter").then((data) => {
-      if (data.Monofilter) {
-        setEnabled(data.Monofilter.enabled);
-        setIntensity(data.Monofilter.intensity ?? 100);
-        setBlacklist(data.Monofilter.blacklist ?? []);
-        setStartMonochromate(data.Monofilter.scheduleStart ?? "17:00");
-        setEndMonochromate(data.Monofilter.scheduleEnd ?? "9:00");
-      }
-    });
+    // Set loading state to true until data is fetched
+    setLoading(true);
+
+    // Create a flag to track if the component is still mounted
+    let isMounted = true;
+
+    browser.storage.local
+      .get("Monofilter")
+      .then((data) => {
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        if (data.Monofilter) {
+          // Use nullish coalescing to provide defaults only when needed
+          setEnabled(data.Monofilter.enabled ?? false);
+          setIntensity(data.Monofilter.intensity ?? 100);
+          setBlacklist(data.Monofilter.blacklist ?? []);
+          setStartMonochromate(data.Monofilter.scheduleStart ?? "17:00");
+          setEndMonochromate(data.Monofilter.scheduleEnd ?? "9:00");
+        }
+        // Only turn off loading when data is actually loaded
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error loading settings:", error);
+        // In case of error, still set loading to false to prevent UI lockup
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
 
     // Listen for storage changes to keep UI in sync
     const storageListener = (changes: any) => {
       if (changes.Monofilter) {
         const newValue = changes.Monofilter.newValue;
         if (newValue) {
-          setEnabled(newValue.enabled);
+          setEnabled(newValue.enabled ?? false);
           setIntensity(newValue.intensity ?? 100);
           setBlacklist(newValue.blacklist ?? []);
           setStartMonochromate(newValue.scheduleStart ?? "17:00");
@@ -106,7 +129,10 @@ export default function App() {
     };
 
     browser.storage.onChanged.addListener(storageListener);
-    return () => browser.storage.onChanged.removeListener(storageListener);
+    return () => {
+      isMounted = false;
+      browser.storage.onChanged.removeListener(storageListener);
+    };
   }, []);
 
   // Get current URL only once
@@ -118,15 +144,18 @@ export default function App() {
       }
     });
   }, []);
-
   const toggleGreyscale = useCallback(() => {
+    // Prevent toggle during loading
+    if (loading) return;
+
     const newEnabled = !enabled;
     setEnabled(newEnabled);
     browser.runtime.sendMessage({ type: "toggleGreyscale", intensity });
-  }, [enabled, intensity]);
-
+  }, [enabled, intensity, loading]);
   const changeIntensity = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (loading) return;
+
       const newIntensity = parseInt(e.target.value, 10);
       setIntensity(newIntensity);
       browser.runtime.sendMessage({
@@ -134,11 +163,12 @@ export default function App() {
         value: newIntensity,
       });
     },
-    []
+    [loading]
   );
-
   const changeStartTime = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (loading) return;
+
       const newStartTime = e.target.value;
       setStartMonochromate(newStartTime);
       browser.runtime.sendMessage({
@@ -146,11 +176,13 @@ export default function App() {
         value: newStartTime,
       });
     },
-    []
+    [loading]
   );
 
   const changeEndTime = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (loading) return;
+
       const newEndTime = e.target.value;
       setEndMonochromate(newEndTime);
       browser.runtime.sendMessage({
@@ -158,28 +190,29 @@ export default function App() {
         value: newEndTime,
       });
     },
-    []
+    [loading]
   );
-
   const addCurrentSite = useCallback(async () => {
-    if (!currentUrl || blacklist.includes(currentUrl)) return;
+    if (loading || !currentUrl || blacklist.includes(currentUrl)) return;
 
     const newBlacklist = [...blacklist, currentUrl];
     browser.runtime.sendMessage({
       type: "setBlacklist",
       value: newBlacklist,
     });
-  }, [currentUrl, blacklist]);
+  }, [currentUrl, blacklist, loading]);
 
   const removeSite = useCallback(
     (site: string) => {
+      if (loading) return;
+
       const newBlacklist = blacklist.filter((s) => s !== site);
       browser.runtime.sendMessage({
         type: "setBlacklist",
         value: newBlacklist,
       });
     },
-    [blacklist]
+    [blacklist, loading]
   );
 
   const handleReturnToMain = useCallback(() => {
@@ -188,8 +221,12 @@ export default function App() {
   }, []);
 
   return (
-    <div className="w-[420px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
-      {view === "main" ? (
+    <div className="w-[420px] h-[550px] bg-white text-neutral-800 p-6 flex flex-col">
+      {loading ? (
+        <div className="flex justify-center items-center flex-1">
+          <Icons.Loader />
+        </div>
+      ) : view === "main" ? (
         <>
           <div className="flex items-center gap-1 mb-6">
             <img src="/logo.png" alt="Monochromate Logo" className="h-8 w-8" />
@@ -419,11 +456,11 @@ export default function App() {
           </footer>
         </>
       ) : (
-        <div className="h-full flex flex-col">
-          <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-col pb-5">
+          <div className="flex items-center gap-3 ">
             <button
               onClick={handleReturnToMain}
-              className="p-1 rounded-full hover:bg-neutral-100 "
+              className="p-1 rounded-full hover:bg-neutral-100"
             >
               <Icons.ArrowLeft />
             </button>
