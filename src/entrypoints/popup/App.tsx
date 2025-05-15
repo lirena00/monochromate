@@ -101,7 +101,7 @@ export default function App() {
           setIntensity(data.Monofilter.intensity ?? 100);
           setBlacklist(data.Monofilter.blacklist ?? []);
           setStartMonochromate(data.Monofilter.scheduleStart ?? "17:00");
-          setEndMonochromate(data.Monofilter.scheduleEnd ?? "9:00");
+          setEndMonochromate(data.Monofilter.scheduleEnd ?? "09:00");
         }
         // Only turn off loading when data is actually loaded
         setLoading(false);
@@ -456,8 +456,8 @@ export default function App() {
           </footer>
         </>
       ) : (
-        <div className="flex flex-col pb-5">
-          <div className="flex items-center gap-3 ">
+        <div className="flex flex-col h-full">
+          <div className="flex items-center gap-3 mb-4">
             <button
               onClick={handleReturnToMain}
               className="p-1 rounded-full hover:bg-neutral-100"
@@ -466,7 +466,6 @@ export default function App() {
             </button>
             <h1 className="text-xl font-bold">Manage Excluded Sites</h1>
           </div>
-
           <div className="relative mb-3">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
               <Icons.Search />
@@ -480,7 +479,6 @@ export default function App() {
               autoFocus
             />
           </div>
-
           <div className="mb-4">
             <h2 className="text-sm font-medium text-neutral-500 mb-2">
               Current Site
@@ -518,8 +516,7 @@ export default function App() {
               )}
             </div>
           </div>
-
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
             <h2 className="text-sm font-medium text-neutral-500 mb-2">
               All Excluded Sites
             </h2>
