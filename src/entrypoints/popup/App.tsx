@@ -12,6 +12,7 @@ import {
   ChevronUp,
   ArrowLeft,
   AlarmClock,
+  Loader2,
 } from "lucide-react";
 import { Discord } from "@/components/Icons/Discord";
 import "./App.css";
@@ -30,6 +31,7 @@ const Icons = {
   ChevronUp: () => <ChevronUp size={15} />,
   ArrowLeft: () => <ArrowLeft size={18} />,
   Discord: () => <Discord />,
+  Loader: () => <Loader2 size={24} className="animate-spin" />,
 };
 
 // Debounce helper function
@@ -51,12 +53,14 @@ const useDebounce = (value: string, delay: number) => {
 
 export default function App() {
   const [enabled, setEnabled] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
   const [startMonochromate, setStartMonochromate] = useState("");
   const [endMonochromate, setEndMonochromate] = useState("");
+  const [scheduleToggle, setScheduleToggle] = useState(false);
   const [view, setView] = useState<"main" | "blacklist">("main");
 
   // Debounce search term to avoid excessive filtering
@@ -78,35 +82,60 @@ export default function App() {
         : blacklist,
     [blacklist, debouncedSearchTerm]
   );
-
   // Load initial data only once
   useEffect(() => {
-    browser.storage.local.get("Monofilter").then((data) => {
-      if (data.Monofilter) {
-        setEnabled(data.Monofilter.enabled);
-        setIntensity(data.Monofilter.intensity ?? 100);
-        setBlacklist(data.Monofilter.blacklist ?? []);
-        setStartMonochromate(data.Monofilter.scheduleStart ?? "17:00");
-        setEndMonochromate(data.Monofilter.scheduleEnd ?? "9:00");
-      }
-    });
+    // Set loading state to true until data is fetched
+    setLoading(true);
+
+    // Create a flag to track if the component is still mounted
+    let isMounted = true;
+
+    browser.storage.local
+      .get("Monofilter")
+      .then((data) => {
+        // Only update state if component is still mounted
+        if (!isMounted) return;
+
+        if (data.Monofilter) {
+          // Use nullish coalescing to provide defaults only when needed
+          setEnabled(data.Monofilter.enabled ?? false);
+          setIntensity(data.Monofilter.intensity ?? 100);
+          setBlacklist(data.Monofilter.blacklist ?? []);
+          setStartMonochromate(data.Monofilter.scheduleStart ?? "17:00");
+          setEndMonochromate(data.Monofilter.scheduleEnd ?? "09:00");
+          setScheduleToggle(data.Monofilter.schedule ?? true);
+        }
+        // Only turn off loading when data is actually loaded
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error loading settings:", error);
+        // In case of error, still set loading to false to prevent UI lockup
+        if (isMounted) {
+          setLoading(false);
+        }
+      });
 
     // Listen for storage changes to keep UI in sync
     const storageListener = (changes: any) => {
       if (changes.Monofilter) {
         const newValue = changes.Monofilter.newValue;
         if (newValue) {
-          setEnabled(newValue.enabled);
+          setEnabled(newValue.enabled ?? false);
           setIntensity(newValue.intensity ?? 100);
           setBlacklist(newValue.blacklist ?? []);
           setStartMonochromate(newValue.scheduleStart ?? "17:00");
           setEndMonochromate(newValue.scheduleEnd ?? "09:00");
+          setScheduleToggle(newValue.schedule ?? true);
         }
       }
     };
 
     browser.storage.onChanged.addListener(storageListener);
-    return () => browser.storage.onChanged.removeListener(storageListener);
+    return () => {
+      isMounted = false;
+      browser.storage.onChanged.removeListener(storageListener);
+    };
   }, []);
 
   // Get current URL only once
@@ -118,15 +147,18 @@ export default function App() {
       }
     });
   }, []);
-
   const toggleGreyscale = useCallback(() => {
+    // Prevent toggle during loading
+    if (loading) return;
+
     const newEnabled = !enabled;
     setEnabled(newEnabled);
     browser.runtime.sendMessage({ type: "toggleGreyscale", intensity });
-  }, [enabled, intensity]);
-
+  }, [enabled, intensity, loading]);
   const changeIntensity = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (loading) return;
+
       const newIntensity = parseInt(e.target.value, 10);
       setIntensity(newIntensity);
       browser.runtime.sendMessage({
@@ -134,11 +166,12 @@ export default function App() {
         value: newIntensity,
       });
     },
-    []
+    [loading]
   );
-
   const changeStartTime = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (loading) return;
+
       const newStartTime = e.target.value;
       setStartMonochromate(newStartTime);
       browser.runtime.sendMessage({
@@ -146,11 +179,13 @@ export default function App() {
         value: newStartTime,
       });
     },
-    []
+    [loading]
   );
 
   const changeEndTime = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (loading) return;
+
       const newEndTime = e.target.value;
       setEndMonochromate(newEndTime);
       browser.runtime.sendMessage({
@@ -158,28 +193,41 @@ export default function App() {
         value: newEndTime,
       });
     },
-    []
+    [loading]
   );
 
+  const toggleSchedule = useCallback(() => {
+    if (loading) return;
+
+    const newScheduleToggle = !scheduleToggle;
+    setScheduleToggle(newScheduleToggle);
+    browser.runtime.sendMessage({
+      type: "toggleSchedule",
+      value: newScheduleToggle,
+    });
+  }, [scheduleToggle, loading]);
+
   const addCurrentSite = useCallback(async () => {
-    if (!currentUrl || blacklist.includes(currentUrl)) return;
+    if (loading || !currentUrl || blacklist.includes(currentUrl)) return;
 
     const newBlacklist = [...blacklist, currentUrl];
     browser.runtime.sendMessage({
       type: "setBlacklist",
       value: newBlacklist,
     });
-  }, [currentUrl, blacklist]);
+  }, [currentUrl, blacklist, loading]);
 
   const removeSite = useCallback(
     (site: string) => {
+      if (loading) return;
+
       const newBlacklist = blacklist.filter((s) => s !== site);
       browser.runtime.sendMessage({
         type: "setBlacklist",
         value: newBlacklist,
       });
     },
-    [blacklist]
+    [blacklist, loading]
   );
 
   const handleReturnToMain = useCallback(() => {
@@ -188,8 +236,12 @@ export default function App() {
   }, []);
 
   return (
-    <div className="w-[420px] h-[550px]  bg-white text-neutral-800 p-6 flex flex-col">
-      {view === "main" ? (
+    <div className="w-[420px] h-[550px] bg-white text-neutral-800 p-6 flex flex-col">
+      {loading ? (
+        <div className="flex justify-center items-center flex-1">
+          <Icons.Loader />
+        </div>
+      ) : view === "main" ? (
         <>
           <div className="flex items-center gap-1 mb-6">
             <img src="/logo.png" alt="Monochromate Logo" className="h-8 w-8" />
@@ -306,9 +358,23 @@ export default function App() {
                     </p>
                   </div>
                 </div>
+                <button
+                  className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${
+                    scheduleToggle
+                      ? "bg-neutral-900 text-neutral-50 hover:bg-neutral-800 active:bg-neutral-950"
+                      : "bg-neutral-100 text-neutral-700 border border-neutral-300 hover:bg-neutral-200 hover:border-neutral-400"
+                  }`}
+                  onClick={toggleSchedule}
+                >
+                  {scheduleToggle ? "On" : "Off"}
+                </button>
               </div>
 
-              <div className="flex gap-2 items-center">
+              <div
+                className={`flex gap-2 items-center ${
+                  !scheduleToggle ? "opacity-60" : ""
+                }`}
+              >
                 <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-neutral-500">Start:</span>
@@ -317,6 +383,7 @@ export default function App() {
                       className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
                       value={startMonochromate}
                       onChange={(e) => changeStartTime(e)}
+                      disabled={!scheduleToggle}
                     />
                   </div>
                 </div>
@@ -326,9 +393,10 @@ export default function App() {
                     <span className="text-xs text-neutral-500">End:</span>
                     <input
                       type="time"
-                      className="bg-transparent border-0 text-sm  text-right focus:outline-hidden"
+                      className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
                       value={endMonochromate}
                       onChange={(e) => changeEndTime(e)}
+                      disabled={!scheduleToggle}
                     />
                   </div>
                 </div>
@@ -419,17 +487,16 @@ export default function App() {
           </footer>
         </>
       ) : (
-        <div className="h-full flex flex-col">
+        <div className="flex flex-col min-h-[700px]">
           <div className="flex items-center gap-3 mb-4">
             <button
               onClick={handleReturnToMain}
-              className="p-1 rounded-full hover:bg-neutral-100 "
+              className="p-1 rounded-full hover:bg-neutral-100"
             >
               <Icons.ArrowLeft />
             </button>
             <h1 className="text-xl font-bold">Manage Excluded Sites</h1>
           </div>
-
           <div className="relative mb-3">
             <div className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500">
               <Icons.Search />
@@ -443,7 +510,6 @@ export default function App() {
               autoFocus
             />
           </div>
-
           <div className="mb-4">
             <h2 className="text-sm font-medium text-neutral-500 mb-2">
               Current Site
@@ -481,8 +547,7 @@ export default function App() {
               )}
             </div>
           </div>
-
-          <div className="flex-1 overflow-hidden flex flex-col">
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
             <h2 className="text-sm font-medium text-neutral-500 mb-2">
               All Excluded Sites
             </h2>
@@ -531,6 +596,58 @@ export default function App() {
               )}
             </div>
           </div>
+          <footer className="mt-8 mb-4 pt-4 border-t border-neutral-200">
+            <div className="flex justify-center items-center space-x-5 text-sm">
+              <a
+                href="https://buymeacoffee.com/lirena00"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="text-red-500 group-hover:scale-110 transition-transform">
+                  <Icons.Heart />
+                </span>
+                <span>Support</span>
+              </a>
+
+              <a
+                href="https://discord.gg/pdxMMNGWCU"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="group-hover:scale-110 transition-transform">
+                  <Icons.Discord />
+                </span>
+                <span>Discord</span>
+              </a>
+
+              <a
+                href="https://github.com/lirena00/monochromate"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-neutral-600 hover:text-neutral-900 transition-colors flex items-center gap-1.5 group"
+              >
+                <span className="group-hover:scale-110 transition-transform">
+                  <Icons.Github />
+                </span>
+                <span>Github</span>
+              </a>
+            </div>
+
+            <div className="my-3 text-center">
+              <a
+                target="_blank"
+                rel="noopener noreferrer"
+                href={`https://monochromate.lirena.in/release-notes/#${
+                  browser.runtime.getManifest().version
+                }`}
+                className="text-xs text-neutral-500 hover:text-neutral-800 transition-colors"
+              >
+                v.{browser.runtime.getManifest().version}
+              </a>
+            </div>
+          </footer>
         </div>
       )}
     </div>
