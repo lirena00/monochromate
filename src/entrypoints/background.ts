@@ -6,6 +6,7 @@ export default defineBackground(() => {
     blacklist: ["localhost"],
     scheduleStart: "17:00",
     scheduleEnd: "09:00",
+    schedule: true,
   };
 
   // Debounce helper to prevent too frequent tab updates
@@ -134,6 +135,7 @@ export default defineBackground(() => {
         blacklist: ["localhost"],
         scheduleStart: "17:00",
         scheduleEnd: "09:00",
+        schedule: true,
       });
     } else {
       currentSettings = data.Monofilter;
@@ -184,14 +186,14 @@ export default defineBackground(() => {
   }
 
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === "StartMonochromate") {
+    if (alarm.name === "StartMonochromate" && currentSettings.schedule) {
       // Enable greyscale mode
       updateSettings({ enabled: true });
       applyGreyscaleToAllTabsDebounced(
         currentSettings.intensity,
         currentSettings.blacklist
       );
-    } else if (alarm.name === "EndMonochromate") {
+    } else if (alarm.name === "EndMonochromate" && currentSettings.schedule) {
       // Disable greyscale mode
       updateSettings({ enabled: false });
       disableGreyscaleForAllTabs();
@@ -227,6 +229,12 @@ export default defineBackground(() => {
       case "setScheduleEnd":
         updateSettings({
           scheduleEnd: message.value,
+        });
+        updateScheduleAlarm();
+        break;
+      case "toggleSchedule":
+        updateSettings({
+          schedule: message.value,
         });
         updateScheduleAlarm();
         break;

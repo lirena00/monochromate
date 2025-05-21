@@ -60,6 +60,7 @@ export default function App() {
   const [currentUrl, setCurrentUrl] = useState("");
   const [startMonochromate, setStartMonochromate] = useState("");
   const [endMonochromate, setEndMonochromate] = useState("");
+  const [scheduleToggle, setScheduleToggle] = useState(false);
   const [view, setView] = useState<"main" | "blacklist">("main");
 
   // Debounce search term to avoid excessive filtering
@@ -102,6 +103,7 @@ export default function App() {
           setBlacklist(data.Monofilter.blacklist ?? []);
           setStartMonochromate(data.Monofilter.scheduleStart ?? "17:00");
           setEndMonochromate(data.Monofilter.scheduleEnd ?? "09:00");
+          setScheduleToggle(data.Monofilter.schedule ?? true);
         }
         // Only turn off loading when data is actually loaded
         setLoading(false);
@@ -124,6 +126,7 @@ export default function App() {
           setBlacklist(newValue.blacklist ?? []);
           setStartMonochromate(newValue.scheduleStart ?? "17:00");
           setEndMonochromate(newValue.scheduleEnd ?? "09:00");
+          setScheduleToggle(newValue.schedule ?? true);
         }
       }
     };
@@ -192,6 +195,18 @@ export default function App() {
     },
     [loading]
   );
+
+  const toggleSchedule = useCallback(() => {
+    if (loading) return;
+
+    const newScheduleToggle = !scheduleToggle;
+    setScheduleToggle(newScheduleToggle);
+    browser.runtime.sendMessage({
+      type: "toggleSchedule",
+      value: newScheduleToggle,
+    });
+  }, [scheduleToggle, loading]);
+
   const addCurrentSite = useCallback(async () => {
     if (loading || !currentUrl || blacklist.includes(currentUrl)) return;
 
@@ -343,9 +358,23 @@ export default function App() {
                     </p>
                   </div>
                 </div>
+                <button
+                  className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${
+                    scheduleToggle
+                      ? "bg-neutral-900 text-neutral-50 hover:bg-neutral-800 active:bg-neutral-950"
+                      : "bg-neutral-100 text-neutral-700 border border-neutral-300 hover:bg-neutral-200 hover:border-neutral-400"
+                  }`}
+                  onClick={toggleSchedule}
+                >
+                  {scheduleToggle ? "On" : "Off"}
+                </button>
               </div>
 
-              <div className="flex gap-2 items-center">
+              <div
+                className={`flex gap-2 items-center ${
+                  !scheduleToggle ? "opacity-60" : ""
+                }`}
+              >
                 <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
                   <div className="flex items-center justify-between">
                     <span className="text-xs text-neutral-500">Start:</span>
@@ -354,6 +383,7 @@ export default function App() {
                       className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
                       value={startMonochromate}
                       onChange={(e) => changeStartTime(e)}
+                      disabled={!scheduleToggle}
                     />
                   </div>
                 </div>
@@ -363,9 +393,10 @@ export default function App() {
                     <span className="text-xs text-neutral-500">End:</span>
                     <input
                       type="time"
-                      className="bg-transparent border-0 text-sm  text-right focus:outline-hidden"
+                      className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
                       value={endMonochromate}
                       onChange={(e) => changeEndTime(e)}
+                      disabled={!scheduleToggle}
                     />
                   </div>
                 </div>
