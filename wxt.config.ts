@@ -10,7 +10,7 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
     name: "Monochromate",
-    version: "1.3.0",
+    version: "1.3.1",
     description:
       "An extension that greyscales the webpage to reduce doomscrolling",
     permissions: ["storage", "activeTab", "scripting", "alarms"],
