@@ -174,10 +174,16 @@ export default function App() {
 
       const newStartTime = e.target.value;
       setStartMonochromate(newStartTime);
-      browser.runtime.sendMessage({
-        type: "setScheduleStart",
-        value: newStartTime,
-      });
+
+      // Clear any existing timeout
+      const timeoutId = setTimeout(() => {
+        browser.runtime.sendMessage({
+          type: "setScheduleStart",
+          value: newStartTime,
+        });
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
     },
     [loading]
   );
@@ -188,10 +194,16 @@ export default function App() {
 
       const newEndTime = e.target.value;
       setEndMonochromate(newEndTime);
-      browser.runtime.sendMessage({
-        type: "setScheduleEnd",
-        value: newEndTime,
-      });
+
+      // Clear any existing timeout
+      const timeoutId = setTimeout(() => {
+        browser.runtime.sendMessage({
+          type: "setScheduleEnd",
+          value: newEndTime,
+        });
+      }, 1000);
+
+      return () => clearTimeout(timeoutId);
     },
     [loading]
   );
