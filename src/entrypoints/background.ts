@@ -276,3 +276,21 @@ export default defineBackground(() => {
     }
   });
 });
+
+browser.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install") {
+    browser.tabs.create({
+      url: "https://monochromate.lirena.in/thanks?utm_source=extension&utm_medium=install",
+    });
+  } else if (details.reason === "update") {
+    const previousVersion = details.previousVersion;
+    const currentVersion = browser.runtime.getManifest().version;
+    if (previousVersion !== currentVersion) {
+      browser.tabs.create({
+        url:
+          "https://monochromate.lirena.in/release-notes/?utm_source=extension&utm_medium=update#v" +
+          currentVersion,
+      });
+    }
+  }
+});
