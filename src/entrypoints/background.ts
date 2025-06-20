@@ -8,6 +8,7 @@ export default defineBackground(() => {
     scheduleEnd: "09:00",
     schedule: true,
   };
+  let settingsInitialized = false;
 
   // Debounce helper to prevent too frequent tab updates
   const debounce = (func: Function, wait: number) => {
@@ -107,8 +108,10 @@ export default defineBackground(() => {
 
   // Optimized update function that only changes what's needed
   const updateSettings = (changes: Partial<typeof currentSettings>) => {
+    if (!settingsInitialized) {
+      return;
+    }
     const newSettings = { ...currentSettings, ...changes };
-
     // Only update storage if something changed
     if (JSON.stringify(newSettings) !== JSON.stringify(currentSettings)) {
       browser.storage.local.set({ Monofilter: newSettings });
@@ -126,7 +129,38 @@ export default defineBackground(() => {
     }
   };
 
-  // Initialize
+  const updateScheduleAlarm = () => {
+    browser.alarms.clear("StartMonochromate").then(() => {
+      if (!currentSettings.scheduleStart) return;
+      const [startHours, startMinutes] = currentSettings.scheduleStart
+        .split(":")
+        .map(Number);
+      const startTime = getTime(startHours, startMinutes);
+      browser.alarms.create("StartMonochromate", {
+        when: startTime,
+        periodInMinutes: 24 * 60,
+      });
+    });
+
+    browser.alarms.clear("EndMonochromate").then(() => {
+      if (!currentSettings.scheduleEnd) return;
+      const [endHours, endMinutes] = currentSettings.scheduleEnd
+        .split(":")
+        .map(Number);
+      const endTime = getTime(endHours, endMinutes);
+      browser.alarms.create("EndMonochromate", {
+        when: endTime,
+        periodInMinutes: 24 * 60,
+      });
+    });
+  };
+
+  function getTime(hour: number, minute: number): number {
+    const target = new Date();
+    target.setHours(hour, minute, 0, 0);
+    return target.getTime();
+  }
+
   browser.storage.local.get("Monofilter").then((data) => {
     if (!data.Monofilter) {
       updateSettings({
@@ -146,61 +180,26 @@ export default defineBackground(() => {
         );
       }
     }
+    settingsInitialized = true;
+    updateScheduleAlarm();
   });
 
-  const updateScheduleAlarm = () => {
-    browser.alarms.clear("StartMonochromate").then(() => {
-      if (!currentSettings.scheduleStart) return;
-      const [startHours, startMinutes] = currentSettings.scheduleStart
-        .split(":")
-        .map(Number);
-      const startTime = getNextTime(startHours, startMinutes);
-      browser.alarms.create("StartMonochromate", {
-        when: startTime,
-        periodInMinutes: 24 * 60,
-      });
-    });
-
-    browser.alarms.clear("EndMonochromate").then(() => {
-      if (!currentSettings.scheduleEnd) return;
-      const [endHours, endMinutes] = currentSettings.scheduleEnd
-        .split(":")
-        .map(Number);
-      const endTime = getNextTime(endHours, endMinutes);
-      browser.alarms.create("EndMonochromate", {
-        when: endTime,
-        periodInMinutes: 24 * 60,
-      });
-    });
-  };
-
-  // Set initial alarm
-  updateScheduleAlarm();
-
-  function getNextTime(hour: number, minute: number): number {
-    const now = new Date();
-    const target = new Date();
-    target.setHours(hour, minute, 0, 0);
-    if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
-    return target.getTime();
-  }
-
   browser.alarms.onAlarm.addListener((alarm) => {
-    if (alarm.name === "StartMonochromate" && currentSettings.schedule) {
-      // Enable greyscale mode
+    if (
+      alarm.name === "StartMonochromate" &&
+      currentSettings.schedule &&
+      settingsInitialized
+    ) {
       updateSettings({ enabled: true });
-      applyGreyscaleToAllTabsDebounced(
-        currentSettings.intensity,
-        currentSettings.blacklist
-      );
-    } else if (alarm.name === "EndMonochromate" && currentSettings.schedule) {
-      // Disable greyscale mode
+    } else if (
+      alarm.name === "EndMonochromate" &&
+      currentSettings.schedule &&
+      settingsInitialized
+    ) {
       updateSettings({ enabled: false });
-      disableGreyscaleForAllTabs();
     }
   });
 
-  // Optimized message handler
   browser.runtime.onMessage.addListener((message) => {
     switch (message.type) {
       case "toggleGreyscale":
@@ -220,15 +219,10 @@ export default defineBackground(() => {
           blacklist: message.value,
         });
         break;
-      case "setScheduleStart":
+      case "saveSchedule":
         updateSettings({
-          scheduleStart: message.value,
-        });
-        updateScheduleAlarm();
-        break;
-      case "setScheduleEnd":
-        updateSettings({
-          scheduleEnd: message.value,
+          scheduleStart: message.startTime,
+          scheduleEnd: message.endTime,
         });
         updateScheduleAlarm();
         break;
@@ -281,4 +275,22 @@ export default defineBackground(() => {
       });
     }
   });
+});
+
+browser.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install") {
+    browser.tabs.create({
+      url: "https://monochromate.lirena.in/thanks?utm_source=extension&utm_medium=install",
+    });
+  } else if (details.reason === "update") {
+    const previousVersion = details.previousVersion;
+    const currentVersion = browser.runtime.getManifest().version;
+    if (previousVersion !== currentVersion) {
+      browser.tabs.create({
+        url:
+          "https://monochromate.lirena.in/release-notes/?utm_source=extension&utm_medium=update#v" +
+          currentVersion,
+      });
+    }
+  }
 });
