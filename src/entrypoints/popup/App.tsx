@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronUp,
   ArrowLeft,
+  Save,
   AlarmClock,
   Loader2,
 } from "lucide-react";
@@ -30,6 +31,7 @@ const Icons = {
   ChevronDown: () => <ChevronDown size={15} />,
   ChevronUp: () => <ChevronUp size={15} />,
   ArrowLeft: () => <ArrowLeft size={18} />,
+  Save: () => <Save size={15} />,
   Discord: () => <Discord />,
   Loader: () => <Loader2 size={24} className="animate-spin" />,
 };
@@ -60,6 +62,8 @@ export default function App() {
   const [currentUrl, setCurrentUrl] = useState("");
   const [startMonochromate, setStartMonochromate] = useState("");
   const [endMonochromate, setEndMonochromate] = useState("");
+  const [tempStartTime, setTempStartTime] = useState("");
+  const [tempEndTime, setTempEndTime] = useState("");
   const [scheduleToggle, setScheduleToggle] = useState(false);
   const [view, setView] = useState<"main" | "blacklist">("main");
 
@@ -101,8 +105,12 @@ export default function App() {
           setEnabled(data.Monofilter.enabled ?? false);
           setIntensity(data.Monofilter.intensity ?? 100);
           setBlacklist(data.Monofilter.blacklist ?? []);
-          setStartMonochromate(data.Monofilter.scheduleStart ?? "17:00");
-          setEndMonochromate(data.Monofilter.scheduleEnd ?? "09:00");
+          const scheduleStart = data.Monofilter.scheduleStart ?? "17:00";
+          const scheduleEnd = data.Monofilter.scheduleEnd ?? "09:00";
+          setStartMonochromate(scheduleStart);
+          setEndMonochromate(scheduleEnd);
+          setTempStartTime(scheduleStart);
+          setTempEndTime(scheduleEnd);
           setScheduleToggle(data.Monofilter.schedule ?? true);
         }
         // Only turn off loading when data is actually loaded
@@ -124,8 +132,12 @@ export default function App() {
           setEnabled(newValue.enabled ?? false);
           setIntensity(newValue.intensity ?? 100);
           setBlacklist(newValue.blacklist ?? []);
-          setStartMonochromate(newValue.scheduleStart ?? "17:00");
-          setEndMonochromate(newValue.scheduleEnd ?? "09:00");
+          const scheduleStart = newValue.scheduleStart ?? "17:00";
+          const scheduleEnd = newValue.scheduleEnd ?? "09:00";
+          setStartMonochromate(scheduleStart);
+          setEndMonochromate(scheduleEnd);
+          setTempStartTime(scheduleStart);
+          setTempEndTime(scheduleEnd);
           setScheduleToggle(newValue.schedule ?? true);
         }
       }
@@ -168,45 +180,18 @@ export default function App() {
     },
     [loading]
   );
-  const changeStartTime = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (loading) return;
 
-      const newStartTime = e.target.value;
-      setStartMonochromate(newStartTime);
+  const saveScheduleTimes = useCallback(() => {
+    if (loading) return;
 
-      // Clear any existing timeout
-      const timeoutId = setTimeout(() => {
-        browser.runtime.sendMessage({
-          type: "setScheduleStart",
-          value: newStartTime,
-        });
-      }, 1000);
-
-      return () => clearTimeout(timeoutId);
-    },
-    [loading]
-  );
-
-  const changeEndTime = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (loading) return;
-
-      const newEndTime = e.target.value;
-      setEndMonochromate(newEndTime);
-
-      // Clear any existing timeout
-      const timeoutId = setTimeout(() => {
-        browser.runtime.sendMessage({
-          type: "setScheduleEnd",
-          value: newEndTime,
-        });
-      }, 1000);
-
-      return () => clearTimeout(timeoutId);
-    },
-    [loading]
-  );
+    setStartMonochromate(tempStartTime);
+    setEndMonochromate(tempEndTime);
+    browser.runtime.sendMessage({
+      type: "saveSchedule",
+      startTime: tempStartTime,
+      endTime: tempEndTime,
+    });
+  }, [tempStartTime, tempEndTime, loading]);
 
   const toggleSchedule = useCallback(() => {
     if (loading) return;
@@ -383,35 +368,54 @@ export default function App() {
               </div>
 
               <div
-                className={`flex gap-2 items-center ${
-                  !scheduleToggle ? "opacity-60" : ""
-                }`}
+                className={`space-y-3 ${!scheduleToggle ? "opacity-60" : ""}`}
               >
-                <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-neutral-500">Start:</span>
-                    <input
-                      type="time"
-                      className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
-                      value={startMonochromate}
-                      onChange={(e) => changeStartTime(e)}
-                      disabled={!scheduleToggle}
-                    />
+                <div className="flex gap-2 items-center">
+                  <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-neutral-500">Start:</span>
+                      <input
+                        type="time"
+                        className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
+                        value={tempStartTime}
+                        onChange={(e) => setTempStartTime(e.target.value)}
+                        disabled={!scheduleToggle}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-neutral-500">End:</span>
+                      <input
+                        type="time"
+                        className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
+                        value={tempEndTime}
+                        onChange={(e) => setTempEndTime(e.target.value)}
+                        disabled={!scheduleToggle}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-neutral-500">End:</span>
-                    <input
-                      type="time"
-                      className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
-                      value={endMonochromate}
-                      onChange={(e) => changeEndTime(e)}
-                      disabled={!scheduleToggle}
-                    />
-                  </div>
-                </div>
+                <button
+                  onClick={saveScheduleTimes}
+                  disabled={
+                    !scheduleToggle ||
+                    (tempStartTime === startMonochromate &&
+                      tempEndTime === endMonochromate)
+                  }
+                  className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+                    !scheduleToggle ||
+                    (tempStartTime === startMonochromate &&
+                      tempEndTime === endMonochromate)
+                      ? "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                      : "bg-neutral-900 text-white hover:bg-neutral-800"
+                  }`}
+                >
+                  <Icons.Save />
+                  Save Schedule
+                </button>
               </div>
             </div>
 

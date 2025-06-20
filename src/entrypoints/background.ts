@@ -219,15 +219,10 @@ export default defineBackground(() => {
           blacklist: message.value,
         });
         break;
-      case "setScheduleStart":
+      case "saveSchedule":
         updateSettings({
-          scheduleStart: message.value,
-        });
-        updateScheduleAlarm();
-        break;
-      case "setScheduleEnd":
-        updateSettings({
-          scheduleEnd: message.value,
+          scheduleStart: message.startTime,
+          scheduleEnd: message.endTime,
         });
         updateScheduleAlarm();
         break;
