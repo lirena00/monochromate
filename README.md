@@ -2,7 +2,7 @@
 
 A sleek browser extension that turns your web browsing experience into grayscale, helping reduce digital distractions and avoid doomscrolling.
 
-![Version](https://img.shields.io/badge/version-1.3.1-black)
+![Version](https://img.shields.io/badge/version-1.3.2-black)
 ![License](https://img.shields.io/badge/license-MIT-black)
 
 <p align="center">
