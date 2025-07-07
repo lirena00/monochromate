@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Discord } from "@/components/Icons/Discord";
 import "./App.css";
+import Backup from "@/components/Backup";
 
 const Icons = {
   Power: () => <Power size={20} />,
@@ -447,6 +448,8 @@ export default function App() {
                 {intensity}%
               </div>
             </div>
+
+            <Backup />
           </div>
 
           <footer className="mt-8 mb-4 pt-4 border-t border-neutral-200">
