@@ -6,7 +6,11 @@ const getCurrentHostname = () => {
 
 // Cache DOM nodes and reduce layout operations
 let overlayElement: HTMLDivElement | null = null;
-let currentSettings = { enabled: false, intensity: 100, blacklist: [] as string[] };
+let currentSettings = {
+  enabled: false,
+  intensity: 100,
+  blacklist: [] as string[],
+};
 let isFullscreenActive = false;
 
 // Use a single function to manage the overlay with efficient updates
@@ -52,8 +56,9 @@ const removeFullscreenGreyscale = (element: Element) => {
 };
 
 const getFullscreenElement = (): Element | null => {
-  return document.fullscreenElement || 
-        (document as any).webkitFullscreenElement
+  return (
+    document.fullscreenElement || (document as any).webkitFullscreenElement
+  );
 };
 
 const handleFullscreenChange = () => {
@@ -70,16 +75,20 @@ const handleFullscreenChange = () => {
     if (fullscreenElement) {
       removeFullscreenGreyscale(fullscreenElement);
     }
-    
-    document.querySelectorAll('[style*="grayscale"]').forEach(element => {
-      if (element instanceof HTMLElement && element.style.filter.includes('grayscale')) {
+
+    document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
+      if (
+        element instanceof HTMLElement &&
+        element.style.filter.includes("grayscale")
+      ) {
         removeFullscreenGreyscale(element);
       }
     });
 
     if (currentSettings.enabled) {
       const currentSite = getCurrentHostname();
-      const shouldShowOverlay = !currentSettings.blacklist.includes(currentSite);
+      const shouldShowOverlay =
+        !currentSettings.blacklist.includes(currentSite);
       updateOverlay(shouldShowOverlay, currentSettings.intensity);
     }
   }
@@ -89,67 +98,70 @@ export default defineContentScript({
   matches: ["<all_urls>"],
   async main(ctx: ContentScriptContext) {
     const currentSite = getCurrentHostname();
+    const initialSettings = await settings.getValue();
 
-    // Get initial settings
-    browser.storage.local.get("Monofilter").then((data) => {
-      const settings = data.Monofilter;
-      if (!settings?.enabled) return;
+    currentSettings = {
+      enabled: initialSettings.enabled,
+      intensity: initialSettings.intensity,
+      blacklist: initialSettings.blacklist,
+    };
 
-      currentSettings = {
-        enabled: settings.enabled || false,
-        intensity: settings.intensity || 100,
-        blacklist: settings.blacklist || []
-      };
-
-      if (!currentSettings.blacklist.includes(currentSite)) {
-        const fullscreenElement = getFullscreenElement();
-        if (fullscreenElement) {
-          isFullscreenActive = true;
-          applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
-        } else {
-          updateOverlay(true, currentSettings.intensity);
-        }
+    if (
+      currentSettings.enabled &&
+      !currentSettings.blacklist.includes(currentSite)
+    ) {
+      const fullscreenElement = getFullscreenElement();
+      if (fullscreenElement) {
+        isFullscreenActive = true;
+        applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
+      } else {
+        updateOverlay(true, currentSettings.intensity);
       }
-    });
+    }
 
-    // Listen for settings changes
-    browser.storage.onChanged.addListener((changes) => {
-      if (changes.Monofilter) {
-        const newValue = changes.Monofilter.newValue || {};
-        const { enabled = false, intensity = 100, blacklist = [] } = newValue;
-        
-        currentSettings = { enabled, intensity, blacklist };
-        const shouldShowOverlay = enabled && !blacklist.includes(currentSite);
-        
+    const unwatchSettings = settings.watch((newSettings, oldSettings) => {
+      if (newSettings) {
+        currentSettings = {
+          enabled: newSettings.enabled,
+          intensity: newSettings.intensity,
+          blacklist: newSettings.blacklist,
+        };
+
+        const shouldShowOverlay =
+          newSettings.enabled && !newSettings.blacklist.includes(currentSite);
+
         const fullscreenElement = getFullscreenElement();
         if (fullscreenElement && isFullscreenActive) {
           if (shouldShowOverlay) {
-            applyFullscreenGreyscale(fullscreenElement, intensity);
+            applyFullscreenGreyscale(fullscreenElement, newSettings.intensity);
           } else {
             removeFullscreenGreyscale(fullscreenElement);
           }
         } else {
-          updateOverlay(shouldShowOverlay, intensity);
+          updateOverlay(shouldShowOverlay, newSettings.intensity);
         }
       }
     });
 
-    ["fullscreenchange", "webkitfullscreenchange"].forEach(event => {
+    ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
       document.addEventListener(event, handleFullscreenChange);
     });
 
     ctx.onInvalidated(() => {
-      ["fullscreenchange", "webkitfullscreenchange"].forEach(event => {
+      ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
         document.removeEventListener(event, handleFullscreenChange);
       });
-      
+
       if (overlayElement) {
         overlayElement.remove();
         overlayElement = null;
       }
-      
-      document.querySelectorAll('[style*="grayscale"]').forEach(element => {
-        if (element instanceof HTMLElement && element.style.filter.includes('grayscale')) {
+
+      document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
+        if (
+          element instanceof HTMLElement &&
+          element.style.filter.includes("grayscale")
+        ) {
           removeFullscreenGreyscale(element);
         }
       });

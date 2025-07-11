@@ -1,13 +1,6 @@
+import { settings } from "@/utils/storage";
+
 export default defineBackground(() => {
-  // Cache the current settings to reduce storage reads
-  let currentSettings = {
-    enabled: false,
-    intensity: 100,
-    blacklist: ["localhost"],
-    scheduleStart: "17:00",
-    scheduleEnd: "09:00",
-    schedule: true,
-  };
   let settingsInitialized = false;
 
   // Debounce helper to prevent too frequent tab updates
@@ -20,6 +13,7 @@ export default defineBackground(() => {
   };
 
   // Optimized version with hostname extraction helper
+
   const getHostname = (url: string): string => {
     try {
       return new URL(url).hostname.replace("www.", "");
@@ -29,8 +23,9 @@ export default defineBackground(() => {
   };
 
   const getFullscreenElement = (): Element | null => {
-    return document.fullscreenElement || 
-           (document as any).webkitFullscreenElement
+    return (
+      document.fullscreenElement || (document as any).webkitFullscreenElement
+    );
   };
 
   // Debounced version of applyGreyscale to prevent rapid repeated calls
@@ -54,12 +49,17 @@ export default defineBackground(() => {
                   target: { tabId: tab.id },
                   func: (intensity: number) => {
                     const fullscreenElement = getFullscreenElement();
-                    
-                    if (fullscreenElement && fullscreenElement instanceof HTMLElement) {
+
+                    if (
+                      fullscreenElement &&
+                      fullscreenElement instanceof HTMLElement
+                    ) {
                       fullscreenElement.style.filter = `grayscale(${intensity}%)`;
                       fullscreenElement.style.transition = "filter 0.2s ease";
                     } else {
-                      let overlay = document.getElementById("monochromate-overlay");
+                      let overlay = document.getElementById(
+                        "monochromate-overlay"
+                      );
                       if (!overlay) {
                         overlay = document.createElement("div");
                         overlay.id = "monochromate-overlay";
@@ -106,13 +106,18 @@ export default defineBackground(() => {
                 if (overlay) {
                   overlay.remove();
                 }
-                
-                document.querySelectorAll('[style*="grayscale"]').forEach(element => {
-                  if (element instanceof HTMLElement && element.style.filter.includes('grayscale')) {
-                    element.style.filter = "";
-                    element.style.transition = "";
-                  }
-                });
+
+                document
+                  .querySelectorAll('[style*="grayscale"]')
+                  .forEach((element) => {
+                    if (
+                      element instanceof HTMLElement &&
+                      element.style.filter.includes("grayscale")
+                    ) {
+                      element.style.filter = "";
+                      element.style.transition = "";
+                    }
+                  });
               },
             })
             .catch(() => {
@@ -123,30 +128,70 @@ export default defineBackground(() => {
     });
   };
 
-  // Optimized update function that only changes what's needed
-  const updateSettings = (changes: Partial<typeof currentSettings>) => {
-    if (!settingsInitialized) {
-      return;
+  const initializeSettings = async () => {
+    try {
+      const currentSettings = await settings.getValue();
+      if (currentSettings.enabled) {
+        applyGreyscaleToAllTabsDebounced(
+          currentSettings.intensity,
+          currentSettings.blacklist
+        );
+      }
+      settingsInitialized = true;
+      updateScheduleAlarm();
+    } catch (error) {
+      console.error("Failed to initialize settings:", error);
     }
-    const newSettings = { ...currentSettings, ...changes };
-    // Only update storage if something changed
-    if (JSON.stringify(newSettings) !== JSON.stringify(currentSettings)) {
-      browser.storage.local.set({ Monofilter: newSettings });
-      currentSettings = newSettings;
+  };
 
-      // Apply changes if enabled
-      if (newSettings.enabled) {
+  const unwatchSettings = settings.watch((newSettings, oldSettings) => {
+    if (!settingsInitialized) return;
+
+    if (newSettings?.enabled !== oldSettings?.enabled) {
+      if (newSettings?.enabled) {
         applyGreyscaleToAllTabsDebounced(
           newSettings.intensity,
           newSettings.blacklist
         );
-      } else if (changes.hasOwnProperty("enabled") && !newSettings.enabled) {
+      } else {
         disableGreyscaleForAllTabs();
       }
     }
-  };
 
-  const updateScheduleAlarm = () => {
+    if (
+      newSettings?.intensity !== oldSettings?.intensity &&
+      newSettings?.enabled
+    ) {
+      applyGreyscaleToAllTabsDebounced(
+        newSettings.intensity,
+        newSettings.blacklist
+      );
+    }
+
+    if (
+      JSON.stringify(newSettings?.blacklist) !==
+        JSON.stringify(oldSettings?.blacklist) &&
+      newSettings?.enabled
+    ) {
+      applyGreyscaleToAllTabsDebounced(
+        newSettings.intensity,
+        newSettings.blacklist
+      );
+    }
+
+    if (
+      newSettings?.schedule !== oldSettings?.schedule ||
+      newSettings?.scheduleStart !== oldSettings?.scheduleStart ||
+      newSettings?.scheduleEnd !== oldSettings?.scheduleEnd
+    ) {
+      updateScheduleAlarm();
+    }
+  });
+
+  initializeSettings();
+
+  const updateScheduleAlarm = async () => {
+    const currentSettings = await settings.getValue();
     browser.alarms.clear("StartMonochromate").then(() => {
       if (!currentSettings.scheduleStart) return;
       const [startHours, startMinutes] = currentSettings.scheduleStart
@@ -178,74 +223,62 @@ export default defineBackground(() => {
     return target.getTime();
   }
 
-  browser.storage.local.get("Monofilter").then((data) => {
-    if (!data.Monofilter) {
-      updateSettings({
-        enabled: true,
-        intensity: 100,
-        blacklist: ["localhost"],
-        scheduleStart: "17:00",
-        scheduleEnd: "09:00",
-        schedule: true,
-      });
-    } else {
-      currentSettings = data.Monofilter;
-      if (currentSettings.enabled) {
-        applyGreyscaleToAllTabsDebounced(
-          currentSettings.intensity,
-          currentSettings.blacklist
-        );
-      }
-    }
-    settingsInitialized = true;
-    updateScheduleAlarm();
-  });
-
-  browser.alarms.onAlarm.addListener((alarm) => {
+  browser.alarms.onAlarm.addListener(async (alarm) => {
+    const currentSettings = await settings.getValue();
     if (
       alarm.name === "StartMonochromate" &&
       currentSettings.schedule &&
       settingsInitialized
     ) {
-      updateSettings({ enabled: true });
+      await settings.setValue({
+        ...currentSettings,
+        enabled: true,
+      });
     } else if (
       alarm.name === "EndMonochromate" &&
       currentSettings.schedule &&
       settingsInitialized
     ) {
-      updateSettings({ enabled: false });
+      await settings.setValue({
+        ...currentSettings,
+        enabled: false,
+      });
     }
   });
 
-  browser.runtime.onMessage.addListener((message) => {
+  browser.runtime.onMessage.addListener(async (message) => {
+    const currentSettings = await settings.getValue();
     switch (message.type) {
       case "toggleGreyscale":
-        updateSettings({
+        await settings.setValue({
+          ...currentSettings,
           enabled: !currentSettings.enabled,
-          intensity: message.intensity || currentSettings.intensity,
         });
         break;
       case "setIntensity":
-        updateSettings({
-          enabled: true,
+        await settings.setValue({
+          ...currentSettings,
           intensity: message.value,
         });
         break;
       case "setBlacklist":
-        updateSettings({
+        await settings.setValue({
+          ...currentSettings,
           blacklist: message.value,
         });
         break;
       case "saveSchedule":
-        updateSettings({
+        await settings.setValue({
+          ...currentSettings,
           scheduleStart: message.startTime,
           scheduleEnd: message.endTime,
         });
         updateScheduleAlarm();
         break;
       case "toggleSchedule":
-        updateSettings({
-          schedule: message.value,
+        await settings.setValue({
+          ...currentSettings,
+          schedule: !currentSettings.schedule,
         });
         updateScheduleAlarm();
         break;
@@ -253,7 +286,8 @@ export default defineBackground(() => {
   });
 
   // Listen for tab updates to apply greyscale to new tabs
-  browser.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
+    const currentSettings = await settings.getValue();
     if (changeInfo.status === "complete" && currentSettings.enabled) {
       browser.tabs.get(tabId).then((tab) => {
         if (tab.url) {
@@ -263,15 +297,18 @@ export default defineBackground(() => {
               .executeScript({
                 target: { tabId },
                 func: (intensity: number) => {
-
-
                   const fullscreenElement = getFullscreenElement();
-                  
-                  if (fullscreenElement && fullscreenElement instanceof HTMLElement) {
+
+                  if (
+                    fullscreenElement &&
+                    fullscreenElement instanceof HTMLElement
+                  ) {
                     fullscreenElement.style.filter = `grayscale(${intensity}%)`;
                     fullscreenElement.style.transition = "filter 0.2s ease";
                   } else {
-                    let overlay = document.getElementById("monochromate-overlay");
+                    let overlay = document.getElementById(
+                      "monochromate-overlay"
+                    );
                     if (!overlay) {
                       overlay = document.createElement("div");
                       overlay.id = "monochromate-overlay";

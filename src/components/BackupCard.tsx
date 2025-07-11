@@ -1,17 +1,17 @@
+import { settings } from "#imports";
 import { Upload, Download, Check } from "lucide-react";
 import { useState } from "react";
 
 export default function Backup() {
   const handleExport = async () => {
     try {
-      const data = await browser.storage.local.get("Monofilter");
-      const settings = data.Monofilter;
+      const data = await settings.getValue();
 
-      if (settings) {
+      if (data) {
         const exportData = {
           version: browser.runtime.getManifest().version,
           timestamp: new Date().toISOString(),
-          settings: settings,
+          settings: data,
         };
 
         const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -41,7 +41,7 @@ export default function Backup() {
         const importData = JSON.parse(text);
 
         if (importData.settings) {
-          await browser.storage.local.set({ Monofilter: importData.settings });
+          await settings.setValue(importData.settings);
           console.log("Settings imported successfully");
         }
       } catch (error) {
