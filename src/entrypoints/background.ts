@@ -28,6 +28,11 @@ export default defineBackground(() => {
     }
   };
 
+  const getFullscreenElement = (): Element | null => {
+    return document.fullscreenElement || 
+           (document as any).webkitFullscreenElement
+  };
+
   // Debounced version of applyGreyscale to prevent rapid repeated calls
   const applyGreyscaleToAllTabsDebounced = debounce(
     (intensity: number = 100, blacklist: string[] = []) => {
@@ -48,25 +53,30 @@ export default defineBackground(() => {
                 .executeScript({
                   target: { tabId: tab.id },
                   func: (intensity: number) => {
-                    let overlay = document.getElementById(
-                      "monochromate-overlay"
-                    );
-                    if (!overlay) {
-                      overlay = document.createElement("div");
-                      overlay.id = "monochromate-overlay";
-                      overlay.style.cssText = `
-                      position: fixed;
-                      top: 0;
-                      left: 0;
-                      width: 100vw;
-                      height: 100vh;
-                      pointer-events: none;
-                      z-index: 100000;
-                      backdrop-filter: grayscale(${intensity}%) ;
-                    `;
-                      document.documentElement.appendChild(overlay);
+                    const fullscreenElement = getFullscreenElement();
+                    
+                    if (fullscreenElement && fullscreenElement instanceof HTMLElement) {
+                      fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                      fullscreenElement.style.transition = "filter 0.2s ease";
                     } else {
-                      overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                      let overlay = document.getElementById("monochromate-overlay");
+                      if (!overlay) {
+                        overlay = document.createElement("div");
+                        overlay.id = "monochromate-overlay";
+                        overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        pointer-events: none;
+                        z-index: 100000;
+                        backdrop-filter: grayscale(${intensity}%);
+                      `;
+                        document.documentElement.appendChild(overlay);
+                      } else {
+                        overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                      }
                     }
                   },
                   args: [intensity],
@@ -96,6 +106,13 @@ export default defineBackground(() => {
                 if (overlay) {
                   overlay.remove();
                 }
+                
+                document.querySelectorAll('[style*="grayscale"]').forEach(element => {
+                  if (element instanceof HTMLElement && element.style.filter.includes('grayscale')) {
+                    element.style.filter = "";
+                    element.style.transition = "";
+                  }
+                });
               },
             })
             .catch(() => {
@@ -246,23 +263,32 @@ export default defineBackground(() => {
               .executeScript({
                 target: { tabId },
                 func: (intensity: number) => {
-                  let overlay = document.getElementById("monochromate-overlay");
-                  if (!overlay) {
-                    overlay = document.createElement("div");
-                    overlay.id = "monochromate-overlay";
-                    overlay.style.cssText = `
-                      position: fixed;
-                      top: 0;
-                      left: 0;
-                      width: 100vw;
-                      height: 100vh;
-                      pointer-events: none;
-                      z-index: 100000;
-                      backdrop-filter: grayscale(${intensity}%) ;
-                    `;
-                    document.documentElement.appendChild(overlay);
+
+
+                  const fullscreenElement = getFullscreenElement();
+                  
+                  if (fullscreenElement && fullscreenElement instanceof HTMLElement) {
+                    fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                    fullscreenElement.style.transition = "filter 0.2s ease";
                   } else {
-                    overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                    let overlay = document.getElementById("monochromate-overlay");
+                    if (!overlay) {
+                      overlay = document.createElement("div");
+                      overlay.id = "monochromate-overlay";
+                      overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        pointer-events: none;
+                        z-index: 100000;
+                        backdrop-filter: grayscale(${intensity}%);
+                      `;
+                      document.documentElement.appendChild(overlay);
+                    } else {
+                      overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                    }
                   }
                 },
                 args: [currentSettings.intensity],
