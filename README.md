@@ -2,7 +2,7 @@
 
 A sleek browser extension that turns your web browsing experience into grayscale, helping reduce digital distractions and avoid doomscrolling.
 
-![Version](https://img.shields.io/badge/version-1.4.0-black)
+![Version](https://img.shields.io/badge/version-1.4.1-black)
 ![License](https://img.shields.io/badge/license-MIT-black)
 
 <p align="center">
@@ -31,13 +31,13 @@ Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/your-username/monochromate.git
 cd monochromate
-npm install
+pnpm install
 ```
 
 Start the development server with:
 
 ```bash
-npm dev
+pnpm dev
 ```
 
 This will build the extension in **watch mode**, so changes automatically reflect when reloaded in the browser.
@@ -47,8 +47,8 @@ This will build the extension in **watch mode**, so changes automatically reflec
 To generate an optimized build:
 
 ```bash
-npm zip
-npm zip:firefox
+pnpm zip
+pnpm zip:firefox
 ```
 
 This creates a final version inside the `dist/` folder, ready for submission to the Chrome Web Store and Mozilla Add-ons.
