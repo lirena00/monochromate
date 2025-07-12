@@ -6,6 +6,7 @@ import GreyscaleToggleCard from "@/components/ToggleCard";
 import ExcludedSitesCard from "@/components/BlacklistCard";
 import ScheduleCard from "@/components/ScheduleCard";
 import IntensityCard from "@/components/IntensityCard";
+import WarningCard from "@/components/WarningCard";
 import Footer from "@/components/Footer";
 import BlacklistManagement from "@/components/BlacklistManagement";
 import { Loader2 } from "lucide-react";
@@ -188,6 +189,7 @@ export default function App() {
         <>
           <Header />
           <div className="grid grid-cols-1 gap-4 flex-1">
+            <WarningCard currentUrl={currentUrl} />
             <GreyscaleToggleCard enabled={enabled} onToggle={toggleGreyscale} />
 
             <ExcludedSitesCard
