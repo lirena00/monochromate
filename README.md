@@ -19,8 +19,13 @@ A sleek browser extension that turns your web browsing experience into grayscale
 - **One-Click Toggle** - Instantly switch between color and grayscale modes
 - **Intensity Control** - Fine-tune the grayscale effect (0-100%)
 - **Site Exclusions** - Maintain a blacklist of sites where color should remain enabled
+- **Smart Scheduling** - Automatically enable/disable monochrome mode at specific times
 - **Real-time Updates** - Changes apply instantly without page refresh
-- **Minimal Interface** - Clean, modern UI
+- **Backup & Restore** - Export and import your settings configuration
+- **Current Site Management** - Quick add/remove current website to exclusions
+- **Fullscreen Support** - Seamlessly works with fullscreen content and videos
+- **Search & Filter** - Easily find and manage excluded sites with search functionality
+- **Minimal Interface** - Clean, modern UI with intuitive controls
 
 ## 🛠️ **Development**
 
