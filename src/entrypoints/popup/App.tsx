@@ -6,6 +6,7 @@ import GreyscaleToggleCard from "@/components/ToggleCard";
 import ExcludedSitesCard from "@/components/BlacklistCard";
 import ScheduleCard from "@/components/ScheduleCard";
 import IntensityCard from "@/components/IntensityCard";
+import WarningCard from "@/components/WarningCard";
 import Footer from "@/components/Footer";
 import BlacklistManagement from "@/components/BlacklistManagement";
 import { Loader2 } from "lucide-react";
@@ -61,23 +62,19 @@ export default function App() {
     setLoading(true);
     let isMounted = true;
 
-    browser.storage.local
-      .get("Monofilter")
-      .then((data) => {
+    settings
+      .getValue()
+      .then((currentSettings) => {
         if (!isMounted) return;
 
-        if (data.Monofilter) {
-          setEnabled(data.Monofilter.enabled ?? false);
-          setIntensity(data.Monofilter.intensity ?? 100);
-          setBlacklist(data.Monofilter.blacklist ?? []);
-          const scheduleStart = data.Monofilter.scheduleStart ?? "17:00";
-          const scheduleEnd = data.Monofilter.scheduleEnd ?? "09:00";
-          setStartMonochromate(scheduleStart);
-          setEndMonochromate(scheduleEnd);
-          setTempStartTime(scheduleStart);
-          setTempEndTime(scheduleEnd);
-          setScheduleToggle(data.Monofilter.schedule ?? true);
-        }
+        setEnabled(currentSettings.enabled);
+        setIntensity(currentSettings.intensity);
+        setBlacklist(currentSettings.blacklist);
+        setStartMonochromate(currentSettings.scheduleStart);
+        setEndMonochromate(currentSettings.scheduleEnd);
+        setTempStartTime(currentSettings.scheduleStart);
+        setTempEndTime(currentSettings.scheduleEnd);
+        setScheduleToggle(currentSettings.schedule);
         setLoading(false);
       })
       .catch((error) => {
@@ -87,28 +84,22 @@ export default function App() {
         }
       });
 
-    const storageListener = (changes: any) => {
-      if (changes.Monofilter) {
-        const newValue = changes.Monofilter.newValue;
-        if (newValue) {
-          setEnabled(newValue.enabled ?? false);
-          setIntensity(newValue.intensity ?? 100);
-          setBlacklist(newValue.blacklist ?? []);
-          const scheduleStart = newValue.scheduleStart ?? "17:00";
-          const scheduleEnd = newValue.scheduleEnd ?? "09:00";
-          setStartMonochromate(scheduleStart);
-          setEndMonochromate(scheduleEnd);
-          setTempStartTime(scheduleStart);
-          setTempEndTime(scheduleEnd);
-          setScheduleToggle(newValue.schedule ?? true);
-        }
+    const unwatchSettings = settings.watch((newSettings) => {
+      if (newSettings && isMounted) {
+        setEnabled(newSettings.enabled);
+        setIntensity(newSettings.intensity);
+        setBlacklist(newSettings.blacklist);
+        setStartMonochromate(newSettings.scheduleStart);
+        setEndMonochromate(newSettings.scheduleEnd);
+        setTempStartTime(newSettings.scheduleStart);
+        setTempEndTime(newSettings.scheduleEnd);
+        setScheduleToggle(newSettings.schedule);
       }
-    };
+    });
 
-    browser.storage.onChanged.addListener(storageListener);
     return () => {
       isMounted = false;
-      browser.storage.onChanged.removeListener(storageListener);
+      unwatchSettings();
     };
   }, []);
 
@@ -198,6 +189,7 @@ export default function App() {
         <>
           <Header />
           <div className="grid grid-cols-1 gap-4 flex-1">
+            <WarningCard currentUrl={currentUrl} />
             <GreyscaleToggleCard enabled={enabled} onToggle={toggleGreyscale} />
 
             <ExcludedSitesCard

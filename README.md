@@ -2,7 +2,7 @@
 
 A sleek browser extension that turns your web browsing experience into grayscale, helping reduce digital distractions and avoid doomscrolling.
 
-![Version](https://img.shields.io/badge/version-1.4.0-black)
+![Version](https://img.shields.io/badge/version-1.4.1-black)
 ![License](https://img.shields.io/badge/license-MIT-black)
 
 <p align="center">
@@ -19,8 +19,13 @@ A sleek browser extension that turns your web browsing experience into grayscale
 - **One-Click Toggle** - Instantly switch between color and grayscale modes
 - **Intensity Control** - Fine-tune the grayscale effect (0-100%)
 - **Site Exclusions** - Maintain a blacklist of sites where color should remain enabled
+- **Smart Scheduling** - Automatically enable/disable monochrome mode at specific times
 - **Real-time Updates** - Changes apply instantly without page refresh
-- **Minimal Interface** - Clean, modern UI
+- **Backup & Restore** - Export and import your settings configuration
+- **Current Site Management** - Quick add/remove current website to exclusions
+- **Fullscreen Support** - Seamlessly works with fullscreen content and videos
+- **Search & Filter** - Easily find and manage excluded sites with search functionality
+- **Minimal Interface** - Clean, modern UI with intuitive controls
 
 ## 🛠️ **Development**
 
@@ -31,13 +36,13 @@ Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/your-username/monochromate.git
 cd monochromate
-npm install
+pnpm install
 ```
 
 Start the development server with:
 
 ```bash
-npm dev
+pnpm dev
 ```
 
 This will build the extension in **watch mode**, so changes automatically reflect when reloaded in the browser.
@@ -47,8 +52,8 @@ This will build the extension in **watch mode**, so changes automatically reflec
 To generate an optimized build:
 
 ```bash
-npm zip
-npm zip:firefox
+pnpm zip
+pnpm zip:firefox
 ```
 
 This creates a final version inside the `dist/` folder, ready for submission to the Chrome Web Store and Mozilla Add-ons.

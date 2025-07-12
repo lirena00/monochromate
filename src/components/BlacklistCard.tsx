@@ -1,7 +1,7 @@
 import React from "react";
 import { Shield } from "lucide-react";
 
-interface BlacklistCardCardProps {
+interface BlacklistCardProps {
   currentUrl: string;
   blacklist: string[];
   isCurrentUrlBlacklisted: boolean;
@@ -10,7 +10,7 @@ interface BlacklistCardCardProps {
   onManageAllSites: () => void;
 }
 
-const BlacklistCardCard: React.FC<BlacklistCardCardProps> = ({
+const BlacklistCardCard: React.FC<BlacklistCardProps> = ({
   currentUrl,
   blacklist,
   isCurrentUrlBlacklisted,
