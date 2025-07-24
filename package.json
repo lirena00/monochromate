@@ -2,7 +2,7 @@
   "name": "monochromate",
   "description": "An extension that greyscales the webpage to reduce doomscrolling",
   "private": true,
-  "version": "1.4.1",
+  "version": "1.4.2",
   "type": "module",
   "scripts": {
     "dev": "wxt",

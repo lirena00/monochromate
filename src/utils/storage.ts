@@ -16,7 +16,7 @@ export const settings = storage.defineItem<MonofilterTypes>(
       blacklist: ["localhost"],
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
-      schedule: true,
+      schedule: false,
     },
     version: 1,
   }

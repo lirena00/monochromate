@@ -10,9 +10,9 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifest: {
     name: "Monochromate - The Best Greyscale Extension",
-    version: "1.4.1",
+    version: "1.4.2",
     description:
-      "Transform your web browsing with customizable greyscale filters, smart site exclusions, and scheduling to reduce digital distractions and combat doomscrolling",
+      "Transform your web browsing with greyscale filter, site exclusions, and scheduling to reduce digital distractions doomscrolling",
     permissions: ["storage", "activeTab", "scripting", "alarms"],
   },
 });
