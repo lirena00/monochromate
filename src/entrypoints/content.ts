@@ -68,7 +68,11 @@ const handleFullscreenChange = () => {
 
   if (isFullscreenActive && fullscreenElement) {
     updateOverlay(false);
-    if (currentSettings.enabled) {
+    const currentSite = getCurrentHostname();
+    if (
+      currentSettings.enabled &&
+      !currentSettings.blacklist.includes(currentSite)
+    ) {
       applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
     }
   } else if (wasFullscreen) {
