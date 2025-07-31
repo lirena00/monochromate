@@ -1,8 +1,28 @@
 import { settings } from "#imports";
-import { Upload, Download, Check } from "lucide-react";
-import { useState } from "react";
+import {
+  Upload,
+  Download,
+  ExternalLink,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function Backup() {
+  const [isFirefox, setIsFirefox] = useState(false);
+  const [importStatus, setImportStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+  const [exportStatus, setExportStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
+
+  useEffect(() => {
+    // Check if running in Firefox
+    const browser = import.meta.env.BROWSER;
+    setIsFirefox(browser === "firefox");
+  }, []);
+
   const handleExport = async () => {
     try {
       const data = await settings.getValue();
@@ -23,11 +43,17 @@ export default function Backup() {
         a.download = `monochromate-settings-backup.json`;
         a.click();
         URL.revokeObjectURL(url);
+
+        setExportStatus("success");
+        setTimeout(() => setExportStatus("idle"), 3000);
       }
     } catch (error) {
       console.error("Export failed:", error);
+      setExportStatus("error");
+      setTimeout(() => setExportStatus("idle"), 3000);
     }
   };
+
   const handleImport = () => {
     const input = document.createElement("input");
     input.type = "file";
@@ -42,13 +68,21 @@ export default function Backup() {
 
         if (importData.settings) {
           await settings.setValue(importData.settings);
-          console.log("Settings imported successfully");
+          setImportStatus("success");
+          setTimeout(() => setImportStatus("idle"), 3000);
         }
       } catch (error) {
         console.error("Import failed:", error);
+        setImportStatus("error");
+        setTimeout(() => setImportStatus("idle"), 3000);
       }
     };
     input.click();
+  };
+
+  const openBackupPage = () => {
+    const url = browser.runtime.getURL("/backup.html");
+    window.open(url, "_blank");
   };
 
   return (
@@ -65,22 +99,93 @@ export default function Backup() {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <button
-          onClick={handleExport}
-          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
-        >
-          <Download size={15} />
-          Export
-        </button>
-        <button
-          onClick={handleImport}
-          className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
-        >
-          <Upload size={15} />
-          Import
-        </button>
-      </div>
+      {importStatus === "success" && (
+        <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-3">
+          <div className="flex items-center gap-2">
+            <div className="text-green-500">
+              <CheckCircle size={12} />
+            </div>
+            <p className="text-xs text-green-700">
+              Settings imported successfully!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {importStatus === "error" && (
+        <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-3">
+          <div className="flex items-center gap-2">
+            <div className="text-red-500">
+              <XCircle size={12} />
+            </div>
+            <p className="text-xs text-red-700">
+              Import failed. Please try again.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {exportStatus === "success" && (
+        <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-3">
+          <div className="flex items-center gap-2">
+            <div className="text-green-500">
+              <CheckCircle size={12} />
+            </div>
+            <p className="text-xs text-green-700">
+              Settings exported successfully!
+            </p>
+          </div>
+        </div>
+      )}
+
+      {exportStatus === "error" && (
+        <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-3">
+          <div className="flex items-center gap-2">
+            <div className="text-red-500">
+              <XCircle size={12} />
+            </div>
+            <p className="text-xs text-red-700">
+              Export failed. Please try again.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {isFirefox ? (
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
+          >
+            <Download size={15} />
+            Export
+          </button>
+          <button
+            onClick={openBackupPage}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-800 transition-colors"
+          >
+            <ExternalLink size={15} />
+            Import
+          </button>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
+          >
+            <Download size={15} />
+            Export
+          </button>
+          <button
+            onClick={handleImport}
+            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
+          >
+            <Upload size={15} />
+            Import
+          </button>
+        </div>
+      )}
     </div>
   );
 }
