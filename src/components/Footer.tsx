@@ -1,8 +1,37 @@
-import React from "react";
-import { Heart, Github, ExternalLink } from "lucide-react";
+import React, { useState } from "react";
+import { Heart, Github, Star } from "lucide-react";
 import { Discord } from "@/components/Icons/Discord";
 
 const Footer: React.FC = () => {
+  const [hoveredStar, setHoveredStar] = useState<number | null>(null);
+  const [selectedRating, setSelectedRating] = useState<number | null>(null);
+
+  const handleStarClick = (rating: number) => {
+    setSelectedRating(rating);
+
+    const browser = import.meta.env.BROWSER;
+    let storeUrl = "";
+
+    switch (browser) {
+      case "chrome":
+        storeUrl =
+          "https://chromewebstore.google.com/detail/monochromate-the-best-gre/hafcajcllbjnoolpfngclfmmgpikdhlm/reviews";
+        break;
+      case "firefox":
+        storeUrl =
+          "https://addons.mozilla.org/en-US/firefox/addon/monochromate/reviews/";
+        break;
+      case "edge":
+        storeUrl =
+          "https://microsoftedge.microsoft.com/addons/detail/monochromate-the-best-g/jnphoibnlnibfchogdlfapbggogkppgh";
+        break;
+      default:
+        "https://chromewebstore.google.com/detail/monochromate-the-best-gre/hafcajcllbjnoolpfngclfmmgpikdhlm/reviews";
+    }
+
+    window.open(storeUrl, "_blank", "noopener,noreferrer");
+  };
+
   return (
     <footer className="my-6 ">
       <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
@@ -48,6 +77,30 @@ const Footer: React.FC = () => {
               Github
             </span>
           </a>
+        </div>
+
+        <div className="mt-2">
+          <div className="bg-white border border-neutral-200 rounded-lg p-3 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1.5 cursor-pointer">
+            <div className="flex gap-0.5">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                  key={star}
+                  size={16}
+                  className={`transition-all cursor-pointer ${
+                    star <= (hoveredStar || selectedRating || 0)
+                      ? "text-yellow-500 fill-yellow-500"
+                      : "text-neutral-300"
+                  } hover:scale-110`}
+                  onMouseEnter={() => setHoveredStar(star)}
+                  onMouseLeave={() => setHoveredStar(null)}
+                  onClick={() => handleStarClick(star)}
+                />
+              ))}
+            </div>
+            <span className="text-xs text-neutral-600 group-hover:text-neutral-800">
+              Rate Us
+            </span>
+          </div>
         </div>
 
         <div className="mt-3 pt-3 border-t border-neutral-200 text-center">
