@@ -119,7 +119,7 @@ export default function Backup() {
               <XCircle size={12} />
             </div>
             <p className="text-xs text-red-700">
-              Import failed. Please try again.
+              Import failed. Please try again with a valid backup file.
             </p>
           </div>
         </div>
