@@ -27,7 +27,7 @@ const updateOverlay = (show: boolean, intensity: number = 100) => {
         width: 100vw;
         height: 100vh;
         pointer-events: none;
-        z-index: 100000;
+        z-index: 2147483647;
         backdrop-filter: grayscale(${intensity}%);
       `;
       document.documentElement.appendChild(overlayElement);
