@@ -3,6 +3,15 @@ import { settings } from "@/utils/storage";
 export default defineBackground(() => {
   let settingsInitialized = false;
 
+  const updateBadge = (enabled: boolean) => {
+    if (enabled) {
+      browser.action.setBadgeText({ text: "ON" });
+      browser.action.setBadgeBackgroundColor({ color: "#f5f5f5" });
+    } else {
+      browser.action.setBadgeText({ text: "" });
+    }
+  };
+
   // Debounce helper to prevent too frequent tab updates
   const debounce = (func: Function, wait: number) => {
     let timeout: number | undefined;
@@ -131,6 +140,8 @@ export default defineBackground(() => {
   const initializeSettings = async () => {
     try {
       const currentSettings = await settings.getValue();
+
+      updateBadge(currentSettings.enabled);
       if (currentSettings.enabled) {
         applyGreyscaleToAllTabsDebounced(
           currentSettings.intensity,
@@ -148,6 +159,7 @@ export default defineBackground(() => {
     if (!settingsInitialized) return;
 
     if (newSettings?.enabled !== oldSettings?.enabled) {
+      updateBadge(newSettings.enabled);
       if (newSettings?.enabled) {
         applyGreyscaleToAllTabsDebounced(
           newSettings.intensity,
