@@ -1,5 +1,14 @@
 import { settings } from "@/utils/storage";
 
+let temporaryDisableTimer: NodeJS.Timeout | null = null;
+
+const cleanupTemporaryDisable = () => {
+  if (temporaryDisableTimer) {
+    clearTimeout(temporaryDisableTimer);
+    temporaryDisableTimer = null;
+  }
+};
+
 export default defineBackground(() => {
   let settingsInitialized = false;
 
@@ -13,7 +22,6 @@ export default defineBackground(() => {
   };
 
   // Optimized version with hostname extraction helper
-
   const getHostname = (url: string): string => {
     try {
       return new URL(url).hostname.replace("www.", "");
@@ -128,10 +136,102 @@ export default defineBackground(() => {
     });
   };
 
-  const initializeSettings = async () => {
+  // Handle temporary disable
+  const setTemporaryDisable = async (minutes: number) => {
+    try {
+      cleanupTemporaryDisable();
+
+      const currentSettings = await settings.getValue();
+      const disableUntil = Date.now() + (minutes * 60 * 1000);
+      await settings.setValue({
+        ...currentSettings,
+        enabled: false,
+        temporaryDisable: true,
+        temporaryDisableUntil: disableUntil
+      });
+
+      temporaryDisableTimer = setTimeout(async () => {
+        try {
+          const latestSettings = await settings.getValue();
+          await settings.setValue({
+            ...latestSettings,
+            enabled: true,
+            temporaryDisable: false,
+            temporaryDisableUntil: null
+          });
+        } catch (error) {
+          console.error('Failed to re-enable after timeout:', error);
+        } finally {
+          temporaryDisableTimer = null;
+        }
+      }, minutes * 60 * 1000);
+
+      browser.runtime.sendMessage({
+        type: "temporaryDisableSet",
+        duration: minutes,
+        until: disableUntil
+      }).catch(error => {
+        console.error('Failed to send temporary disable notification:', error);
+      });
+    } catch (error) {
+      console.error('Error in setTemporaryDisable:', error);
+      throw error;
+    }
+  };
+
+  // Check if temporary disable has expired on startup
+  const checkTemporaryDisableExpiry = async () => {
     try {
       const currentSettings = await settings.getValue();
-      if (currentSettings.enabled) {
+      if (!currentSettings.temporaryDisable || !currentSettings.temporaryDisableUntil) {
+        return;
+      }
+
+      const now = Date.now();
+      const disableUntil = currentSettings.temporaryDisableUntil;
+
+      if (now >= disableUntil) {
+        // Expired, re-enable
+        await settings.setValue({
+          ...currentSettings,
+          enabled: true,
+          temporaryDisable: false,
+          temporaryDisableUntil: null
+        });
+      } else {
+        const remainingTime = disableUntil - now;
+        cleanupTemporaryDisable();
+        
+        temporaryDisableTimer = setTimeout(async () => {
+          try {
+            const latestSettings = await settings.getValue();
+            await settings.setValue({
+              ...latestSettings,
+              enabled: true,
+              temporaryDisable: false,
+              temporaryDisableUntil: null
+            });
+          } catch (error) {
+            console.error('Failed to re-enable after temporary disable expired:', error);
+          } finally {
+            temporaryDisableTimer = null;
+          }
+        }, remainingTime);
+      }
+    } catch (error) {
+      console.error('Error in checkTemporaryDisableExpiry:', error);
+    }
+  };
+
+  browser.runtime.onSuspend.addListener(() => {
+    cleanupTemporaryDisable();
+  });
+
+  const initializeSettings = async () => {
+    try {
+      await checkTemporaryDisableExpiry();
+      const currentSettings = await settings.getValue();
+      if (currentSettings.enabled && !currentSettings.temporaryDisable) {
         applyGreyscaleToAllTabsDebounced(
           currentSettings.intensity,
           currentSettings.blacklist
@@ -148,7 +248,7 @@ export default defineBackground(() => {
     if (!settingsInitialized) return;
 
     if (newSettings?.enabled !== oldSettings?.enabled) {
-      if (newSettings?.enabled) {
+      if (newSettings?.enabled && !newSettings?.temporaryDisable) {
         applyGreyscaleToAllTabsDebounced(
           newSettings.intensity,
           newSettings.blacklist
@@ -160,7 +260,8 @@ export default defineBackground(() => {
 
     if (
       newSettings?.intensity !== oldSettings?.intensity &&
-      newSettings?.enabled
+      newSettings?.enabled &&
+      !newSettings?.temporaryDisable
     ) {
       applyGreyscaleToAllTabsDebounced(
         newSettings.intensity,
@@ -170,8 +271,9 @@ export default defineBackground(() => {
 
     if (
       JSON.stringify(newSettings?.blacklist) !==
-        JSON.stringify(oldSettings?.blacklist) &&
-      newSettings?.enabled
+      JSON.stringify(oldSettings?.blacklist) &&
+      newSettings?.enabled &&
+      !newSettings?.temporaryDisable
     ) {
       applyGreyscaleToAllTabsDebounced(
         newSettings.intensity,
@@ -235,10 +337,13 @@ export default defineBackground(() => {
       currentSettings.schedule &&
       settingsInitialized
     ) {
-      await settings.setValue({
-        ...currentSettings,
-        enabled: true,
-      });
+      // Don't override temporary disable
+      if (!currentSettings.temporaryDisable) {
+        await settings.setValue({
+          ...currentSettings,
+          enabled: true,
+        });
+      }
     } else if (
       alarm.name === "EndMonochromate" &&
       currentSettings.schedule &&
@@ -255,9 +360,13 @@ export default defineBackground(() => {
     const currentSettings = await settings.getValue();
     switch (message.type) {
       case "toggleGreyscale":
+        // Clear temporary disable when manually toggling
+        cleanupTemporaryDisable();
         await settings.setValue({
           ...currentSettings,
           enabled: !currentSettings.enabled,
+          temporaryDisable: false,
+          temporaryDisableUntil: null
         });
         break;
       case "setIntensity":
@@ -287,13 +396,35 @@ export default defineBackground(() => {
         });
         updateScheduleAlarm();
         break;
+      case "temporaryDisable":
+        await setTemporaryDisable(message.minutes);
+        break;
+      case "cancelTemporaryDisable":
+        cleanupTemporaryDisable();
+        await settings.setValue({
+          ...currentSettings,
+          enabled: true,
+          temporaryDisable: false,
+          temporaryDisableUntil: null
+        });
+        break;
+      case "getTemporaryDisableStatus":
+        // Send back current temporary disable status
+        browser.runtime.sendMessage({
+          type: "temporaryDisableStatus",
+          isActive: currentSettings.temporaryDisable,
+          until: currentSettings.temporaryDisableUntil,
+          remainingMinutes: currentSettings.temporaryDisableUntil ?
+            Math.ceil((currentSettings.temporaryDisableUntil - Date.now()) / (60 * 1000)) : 0
+        });
+        break;
     }
   });
 
   // Listen for tab updates to apply greyscale to new tabs
   browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     const currentSettings = await settings.getValue();
-    if (changeInfo.status === "complete" && currentSettings.enabled) {
+    if (changeInfo.status === "complete" && currentSettings.enabled && !currentSettings.temporaryDisable) {
       browser.tabs.get(tabId).then((tab) => {
         if (tab.url) {
           const domain = getHostname(tab.url);
@@ -348,18 +479,14 @@ export default defineBackground(() => {
 browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     browser.tabs.create({
-      url: `https://monochromate.lirena.in/thanks?utm_source=extension&utm_medium=install&browser=${
-        import.meta.env.BROWSER
-      }`,
+      url: `https://monochromate.lirena.in/thanks?utm_source=extension&utm_medium=install&browser=${import.meta.env.BROWSER}`,
     });
   } else if (details.reason === "update") {
     const previousVersion = details.previousVersion;
     const currentVersion = browser.runtime.getManifest().version;
     if (previousVersion !== currentVersion) {
       browser.tabs.create({
-        url: `https://monochromate.lirena.in/release-notes/?utm_source=extension&utm_medium=update&browser=${
-          import.meta.env.BROWSER
-        }#v${currentVersion}`,
+        url: `https://monochromate.lirena.in/release-notes/?utm_source=extension&utm_medium=update&browser=${import.meta.env.BROWSER}#v${currentVersion}`,
       });
     }
   }

@@ -5,6 +5,8 @@ type MonofilterTypes = {
   scheduleStart: string;
   scheduleEnd: string;
   schedule: boolean;
+  temporaryDisable: boolean;
+  temporaryDisableUntil: number | null;
 };
 
 export const settings = storage.defineItem<MonofilterTypes>(
@@ -17,6 +19,8 @@ export const settings = storage.defineItem<MonofilterTypes>(
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
+      temporaryDisable: false,
+      temporaryDisableUntil: null,
     },
     version: 1,
   }

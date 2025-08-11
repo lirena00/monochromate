@@ -10,12 +10,14 @@ let currentSettings = {
   enabled: false,
   intensity: 100,
   blacklist: [] as string[],
+  temporaryDisable: false,
+  temporaryDisableUntil: null as number | null,
 };
 let isFullscreenActive = false;
 
 // Use a single function to manage the overlay with efficient updates
 const updateOverlay = (show: boolean, intensity: number = 100) => {
-  if (show && !isFullscreenActive) {
+  if (show && !isFullscreenActive && !currentSettings.temporaryDisable) {
     if (!overlayElement) {
       overlayElement = document.createElement("div");
       overlayElement.id = "monochromate-overlay";
@@ -71,6 +73,7 @@ const handleFullscreenChange = () => {
     const currentSite = getCurrentHostname();
     if (
       currentSettings.enabled &&
+      !currentSettings.temporaryDisable &&
       !currentSettings.blacklist.includes(currentSite)
     ) {
       applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
@@ -89,7 +92,7 @@ const handleFullscreenChange = () => {
       }
     });
 
-    if (currentSettings.enabled) {
+    if (currentSettings.enabled && !currentSettings.temporaryDisable) {
       const currentSite = getCurrentHostname();
       const shouldShowOverlay =
         !currentSettings.blacklist.includes(currentSite);
@@ -108,10 +111,13 @@ export default defineContentScript({
       enabled: initialSettings.enabled,
       intensity: initialSettings.intensity,
       blacklist: initialSettings.blacklist,
+      temporaryDisable: initialSettings.temporaryDisable || false,
+      temporaryDisableUntil: initialSettings.temporaryDisableUntil || null,
     };
 
     if (
       currentSettings.enabled &&
+      !currentSettings.temporaryDisable &&
       !currentSettings.blacklist.includes(currentSite)
     ) {
       const fullscreenElement = getFullscreenElement();
@@ -129,10 +135,14 @@ export default defineContentScript({
           enabled: newSettings.enabled,
           intensity: newSettings.intensity,
           blacklist: newSettings.blacklist,
+          temporaryDisable: newSettings.temporaryDisable || false,
+          temporaryDisableUntil: newSettings.temporaryDisableUntil || null,
         };
 
         const shouldShowOverlay =
-          newSettings.enabled && !newSettings.blacklist.includes(currentSite);
+          newSettings.enabled &&
+          !newSettings.temporaryDisable &&
+          !newSettings.blacklist.includes(currentSite);
 
         const fullscreenElement = getFullscreenElement();
         if (fullscreenElement && isFullscreenActive) {
@@ -144,6 +154,13 @@ export default defineContentScript({
         } else {
           updateOverlay(shouldShowOverlay, newSettings.intensity);
         }
+      }
+    });
+
+    // Listen for background script messages
+    browser.runtime.onMessage.addListener((message) => {
+      if (message.type === "temporaryDisableSet") {
+        console.log(`Monochromate temporarily disabled for ${message.duration} minutes`);
       }
     });
 
