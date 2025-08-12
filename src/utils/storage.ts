@@ -15,6 +15,9 @@ type MonofilterTypes= {
   scheduleEnd: string;
   schedule: boolean;
   skipMediaPage:boolean
+   temporaryDisable: boolean;
+  temporaryDisableUntil: number | null;
+
 };
 
 export const settings = storage.defineItem<MonofilterTypes>(
@@ -27,7 +30,10 @@ export const settings = storage.defineItem<MonofilterTypes>(
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
+      temporaryDisable: false,
+      temporaryDisableUntil: null,
       skipMediaPage:true,
+
     },
     version: 2,
     migrations:{
@@ -35,6 +41,7 @@ export const settings = storage.defineItem<MonofilterTypes>(
         return{
           ...oldValue,
           skipMediaPage:true
+          
         }
       }
     }
