@@ -10,8 +10,25 @@ let currentSettings = {
   enabled: false,
   intensity: 100,
   blacklist: [] as string[],
+  skipMediaPage:true,
 };
 let isFullscreenActive = false;
+
+// // Use a single function to manage the overlay with efficient updates
+// const updateOverlay = (show: boolean, intensity: number = 100) => {
+//   // Check if we should skip media-only pages
+//   if (show && currentSettings.skipMediaOnlyPages && isMediaOnlyPage()) {
+//     show = false;
+//   }
+
+//   if (show && !isFullscreenActive) {
+//     // ...existing overlay creation code...
+//   } else if (overlayElement) {
+//     overlayElement.remove();
+//     overlayElement = null;
+//   }
+// };
+
 
 // Use a single function to manage the overlay with efficient updates
 const updateOverlay = (show: boolean, intensity: number = 100) => {
@@ -98,6 +115,82 @@ const handleFullscreenChange = () => {
   }
 };
 
+const isMediaOnlyPage = (): boolean => {
+  // Get all visible elements in the body
+  const bodyElements = document.body?.children;
+  if (!bodyElements || bodyElements.length === 0) return false;
+
+  let mediaElementCount = 0;
+  let totalRelevantElements = 0;
+
+  // Helper function to check if element is meaningful content
+  const isMeaningfulElement = (element: Element): boolean => {
+    if (!element) return false;
+    
+    const tagName = element.tagName.toLowerCase();
+    const style = window.getComputedStyle(element);
+    
+    // Skip hidden elements
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+      return false;
+    }
+    
+    // Skip script, style, meta, link tags
+    if (['script', 'style', 'meta', 'link', 'noscript', 'head'].includes(tagName)) {
+      return false;
+    }
+    
+    return true;
+  };
+
+    // Helper function to check if element is media
+  const isMediaElement = (element: Element): boolean => {
+    const tagName = element.tagName.toLowerCase();
+    return ['img', 'video', 'audio', 'canvas', 'svg', 'picture', 'source'].includes(tagName);
+  };
+
+  // Recursively analyze elements
+  const analyzeElements = (elements: HTMLCollection) => {
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
+      
+      if (!isMeaningfulElement(element)) continue;
+      
+      totalRelevantElements++;
+      
+      if (isMediaElement(element)) {
+        mediaElementCount++;
+      } else {
+        // Check if this element contains significant text content
+        const textContent = element.textContent?.trim() || '';
+        const hasSignificantText = textContent.length > 50; // More than 50 chars of text
+        
+        // If it has significant text, it's not media-only
+        if (hasSignificantText) {
+          return false;
+        }
+        
+        // Recursively check children
+        if (element.children.length > 0) {
+          const childResult = analyzeElements(element.children);
+          if (childResult === false) return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const isMediaOnly = analyzeElements(bodyElements);
+  
+  // Consider it media-only if:
+  // 1. We found meaningful elements
+  // 2. At least 80% are media elements
+  // 3. Or if we only have media elements and minimal other content
+  const mediaRatio = totalRelevantElements > 0 ? mediaElementCount / totalRelevantElements : 0;
+  
+  return isMediaOnly && mediaRatio >= 0.8 && mediaElementCount > 0;
+};
+
 export default defineContentScript({
   matches: ["<all_urls>"],
   async main(ctx: ContentScriptContext) {
@@ -108,6 +201,7 @@ export default defineContentScript({
       enabled: initialSettings.enabled,
       intensity: initialSettings.intensity,
       blacklist: initialSettings.blacklist,
+      skipMediaPage:initialSettings.skipMediaPage
     };
 
     if (
@@ -129,6 +223,7 @@ export default defineContentScript({
           enabled: newSettings.enabled,
           intensity: newSettings.intensity,
           blacklist: newSettings.blacklist,
+          skipMediaPage:newSettings.skipMediaPage
         };
 
         const shouldShowOverlay =
