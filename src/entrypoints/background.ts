@@ -12,6 +12,15 @@ const cleanupTemporaryDisable = () => {
 export default defineBackground(() => {
   let settingsInitialized = false;
 
+  const updateBadge = (enabled: boolean) => {
+    if (enabled) {
+      browser.action.setBadgeText({ text: "ON" });
+      browser.action.setBadgeBackgroundColor({ color: "#f5f5f5" });
+    } else {
+      browser.action.setBadgeText({ text: "" });
+    }
+  };
+
   // Debounce helper to prevent too frequent tab updates
   const debounce = (func: Function, wait: number) => {
     let timeout: number | undefined;
@@ -78,7 +87,7 @@ export default defineBackground(() => {
                         width: 100vw;
                         height: 100vh;
                         pointer-events: none;
-                        z-index: 100000;
+                        z-index: 2147483647;
                         backdrop-filter: grayscale(${intensity}%);
                       `;
                         document.documentElement.appendChild(overlay);
@@ -231,7 +240,11 @@ export default defineBackground(() => {
     try {
       await checkTemporaryDisableExpiry();
       const currentSettings = await settings.getValue();
+
       if (currentSettings.enabled && !currentSettings.temporaryDisable) {
+
+      updateBadge(currentSettings.enabled);
+
         applyGreyscaleToAllTabsDebounced(
           currentSettings.intensity,
           currentSettings.blacklist
@@ -248,7 +261,12 @@ export default defineBackground(() => {
     if (!settingsInitialized) return;
 
     if (newSettings?.enabled !== oldSettings?.enabled) {
+
       if (newSettings?.enabled && !newSettings?.temporaryDisable) {
+
+      updateBadge(newSettings.enabled);
+     
+
         applyGreyscaleToAllTabsDebounced(
           newSettings.intensity,
           newSettings.blacklist
@@ -421,6 +439,67 @@ export default defineBackground(() => {
     }
   });
 
+  browser.commands.onCommand.addListener(async (command) => {
+    const currentSettings = await settings.getValue();
+
+    switch (command) {
+      case "toggle_greyscale":
+        await settings.setValue({
+          ...currentSettings,
+          enabled: !currentSettings.enabled,
+        });
+        break;
+
+      case "quick_toggle_blacklist":
+        browser.tabs
+          .query({ active: true, currentWindow: true })
+          .then((tabs) => {
+            const currentTab = tabs[0];
+            if (currentTab?.url) {
+              const domain = getHostname(currentTab.url);
+              if (domain) {
+                const isCurrentUrlBlacklisted =
+                  currentSettings.blacklist.includes(domain);
+
+                if (isCurrentUrlBlacklisted) {
+                  const updatedBlacklist = currentSettings.blacklist.filter(
+                    (site) => site !== domain
+                  );
+                  settings.setValue({
+                    ...currentSettings,
+                    blacklist: updatedBlacklist,
+                  });
+                } else {
+                  settings.setValue({
+                    ...currentSettings,
+                    blacklist: [...currentSettings.blacklist, domain],
+                  });
+                }
+              }
+            }
+          });
+        break;
+
+      case "increase_intensity":
+        if (!currentSettings.enabled) break;
+        const newIntensityUp = Math.min(100, currentSettings.intensity + 10);
+        await settings.setValue({
+          ...currentSettings,
+          intensity: newIntensityUp,
+        });
+        break;
+
+      case "decrease_intensity":
+        if (!currentSettings.enabled) break;
+        const newIntensityDown = Math.max(0, currentSettings.intensity - 10);
+        await settings.setValue({
+          ...currentSettings,
+          intensity: newIntensityDown,
+        });
+        break;
+    }
+  });
+
   // Listen for tab updates to apply greyscale to new tabs
   browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     const currentSettings = await settings.getValue();
@@ -455,7 +534,7 @@ export default defineBackground(() => {
                         width: 100vw;
                         height: 100vh;
                         pointer-events: none;
-                        z-index: 100000;
+                        z-index: 2147483647;
                         backdrop-filter: grayscale(${intensity}%);
                       `;
                       document.documentElement.appendChild(overlay);

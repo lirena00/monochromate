@@ -1,12 +1,23 @@
-type MonofilterTypes = {
+type MonofilterTypes_prev = {
   enabled: boolean;
   intensity: number;
   blacklist: string[];
   scheduleStart: string;
   scheduleEnd: string;
   schedule: boolean;
-  temporaryDisable: boolean;
+
+};
+type MonofilterTypes= {
+  enabled: boolean;
+  intensity: number;
+  blacklist: string[];
+  scheduleStart: string;
+  scheduleEnd: string;
+  schedule: boolean;
+  skipMediaPage:boolean
+   temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
+
 };
 
 export const settings = storage.defineItem<MonofilterTypes>(
@@ -21,7 +32,21 @@ export const settings = storage.defineItem<MonofilterTypes>(
       schedule: false,
       temporaryDisable: false,
       temporaryDisableUntil: null,
+      skipMediaPage:true,
+
     },
-    version: 1,
+    version: 2,
+    migrations:{
+      2:(oldValue:MonofilterTypes_prev):MonofilterTypes=>{
+        return{
+          ...oldValue,
+          skipMediaPage:true
+          
+        }
+      }
+    }
   }
+  
 );
+
+export type Settings=MonofilterTypes;
