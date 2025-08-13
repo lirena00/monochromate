@@ -11,7 +11,7 @@ let currentSettings = {
   enabled: false,
   intensity: 100,
   blacklist: [] as string[],
-  imageExceptionEnabled: true,
+  imageExceptionEnabled: false,
 };
 let isFullscreenActive = false;
 let mutationObserver: MutationObserver | null = null;
@@ -197,7 +197,7 @@ export default defineContentScript({
       enabled: initialSettings.enabled,
       intensity: initialSettings.intensity,
       blacklist: initialSettings.blacklist,
-      imageExceptionEnabled: initialSettings.imageExceptionEnabled ?? true,
+      imageExceptionEnabled: initialSettings.imageExceptionEnabled ?? false,
     };
 
     const initializeGrayscale = () => {
@@ -232,7 +232,7 @@ export default defineContentScript({
           enabled: newSettings.enabled,
           intensity: newSettings.intensity,
           blacklist: newSettings.blacklist,
-          imageExceptionEnabled: newSettings.imageExceptionEnabled ?? true,
+          imageExceptionEnabled: newSettings.imageExceptionEnabled ?? false,
         };
 
         // Re-evaluate when settings change

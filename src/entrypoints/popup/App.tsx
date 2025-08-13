@@ -3,7 +3,6 @@ import "./App.css";
 import Backup from "@/components/BackupCard";
 import Header from "@/components/Header";
 import GreyscaleToggleCard from "@/components/ToggleCard";
-import ImageExceptionCard from "@/components/ImageExceptionCard";
 import ExcludedSitesCard from "@/components/BlacklistCard";
 import ScheduleCard from "@/components/ScheduleCard";
 import IntensityCard from "@/components/IntensityCard";
@@ -33,7 +32,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
-  const [imageExceptionEnabled, setImageExceptionEnabled] = useState(true);
+  const [imageExceptionEnabled, setImageExceptionEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
   const [startMonochromate, setStartMonochromate] = useState("");
@@ -72,7 +71,7 @@ export default function App() {
         setEnabled(currentSettings.enabled);
         setIntensity(currentSettings.intensity);
         setBlacklist(currentSettings.blacklist);
-        setImageExceptionEnabled(currentSettings.imageExceptionEnabled ?? true);
+        setImageExceptionEnabled(currentSettings.imageExceptionEnabled ?? false);
         setStartMonochromate(currentSettings.scheduleStart);
         setEndMonochromate(currentSettings.scheduleEnd);
         setTempStartTime(currentSettings.scheduleStart);
@@ -92,7 +91,7 @@ export default function App() {
         setEnabled(newSettings.enabled);
         setIntensity(newSettings.intensity);
         setBlacklist(newSettings.blacklist);
-        setImageExceptionEnabled(newSettings.imageExceptionEnabled ?? true);
+        setImageExceptionEnabled(newSettings.imageExceptionEnabled ?? false);
         setStartMonochromate(newSettings.scheduleStart);
         setEndMonochromate(newSettings.scheduleEnd);
         setTempStartTime(newSettings.scheduleStart);
@@ -207,11 +206,6 @@ export default function App() {
 
             <GreyscaleToggleCard enabled={enabled} onToggle={toggleGreyscale} />
 
-            <ImageExceptionCard
-              imageExceptionEnabled={imageExceptionEnabled}
-              onToggle={toggleImageException}
-            />
-
             <ExcludedSitesCard
               currentUrl={currentUrl}
               blacklist={blacklist}
@@ -254,6 +248,8 @@ export default function App() {
           onReturnToMain={handleReturnToMain}
           onAddCurrentSite={addCurrentSite}
           onRemoveSite={removeSite}
+          imageExceptionEnabled={imageExceptionEnabled}
+          onToggleImageException={toggleImageException}
         />
       )}
     </div>

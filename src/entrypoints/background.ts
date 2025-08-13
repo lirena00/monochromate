@@ -40,7 +40,7 @@ export default defineBackground(() => {
 
   // Debounced version of applyGreyscale 
   const applyGreyscaleToAllTabsDebounced = debounce(
-    (intensity: number = 100, blacklist: string[] = [], imageExceptionEnabled: boolean = true) => {
+    (intensity: number = 100, blacklist: string[] = [], imageExceptionEnabled: boolean = false) => {
       browser.tabs.query({}).then((tabs) => {
         const tabsToUpdate = tabs.filter((tab) => {
           if (!tab.id || !tab.url) return false;
@@ -209,7 +209,7 @@ export default defineBackground(() => {
         applyGreyscaleToAllTabsDebounced(
           currentSettings.intensity,
           currentSettings.blacklist,
-          currentSettings.imageExceptionEnabled ?? true
+          currentSettings.imageExceptionEnabled ?? false
         );
       }
       settingsInitialized = true;
@@ -227,7 +227,7 @@ export default defineBackground(() => {
         applyGreyscaleToAllTabsDebounced(
           newSettings.intensity,
           newSettings.blacklist,
-          newSettings.imageExceptionEnabled ?? true
+          newSettings.imageExceptionEnabled ?? false
         );
       } else {
         disableGreyscaleForAllTabs();
@@ -403,7 +403,7 @@ export default defineBackground(() => {
                 const isImageOnly = results?.[0]?.result || false;
 
                 // Skip applying greyscale if it's an image-only page and exception is enabled
-                if (isImageOnly && (currentSettings.imageExceptionEnabled ?? true)) {
+                if (isImageOnly && (currentSettings.imageExceptionEnabled ?? false)) {
                   return;
                 }
 

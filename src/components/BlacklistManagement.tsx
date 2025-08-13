@@ -1,5 +1,5 @@
 import React from "react";
-import { ArrowLeft, Search, AlertCircle, X, Shield } from "lucide-react";
+import { ArrowLeft, Search, AlertCircle, X, Shield, Image } from "lucide-react";
 import Footer from "./Footer";
 
 interface BlacklistManagementProps {
@@ -11,6 +11,8 @@ interface BlacklistManagementProps {
   onReturnToMain: () => void;
   onAddCurrentSite: () => void;
   onRemoveSite: (site: string) => void;
+  imageExceptionEnabled: boolean;
+  onToggleImageException: () => void;
 }
 
 const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
@@ -22,6 +24,8 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
   onReturnToMain,
   onAddCurrentSite,
   onRemoveSite,
+  imageExceptionEnabled,
+  onToggleImageException,
 }) => {
   return (
     <div className="flex flex-col h-[700px] overflow-hidden">
@@ -82,6 +86,32 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
               Exclude
             </button>
           )}
+        </div>
+      </div>
+
+      {/* Image Exception Card */}
+      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="text-neutral-700">
+              <Image size={20} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-neutral-800">Image Exception</h2>
+              <p className="text-sm text-neutral-500 italic">
+                Show images in color on image-only pages
+              </p>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input 
+              type="checkbox" 
+              className="sr-only peer" 
+              checked={imageExceptionEnabled}
+              onChange={onToggleImageException}
+            />
+            <div className="w-11 h-6 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-neutral-900"></div>
+          </label>
         </div>
       </div>
 

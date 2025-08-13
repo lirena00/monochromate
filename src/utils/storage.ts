@@ -18,7 +18,7 @@ export const settings = storage.defineItem<MonofilterTypes>(
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
-      imageExceptionEnabled: true,
+      imageExceptionEnabled: false,
     },
     version: 2,
   }
