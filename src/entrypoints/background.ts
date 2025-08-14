@@ -1,3 +1,4 @@
+import { isImageOnlyPage } from "@/utils/ImageCheckUtil";
 import { settings } from "@/utils/storage";
 
 let temporaryDisableTimer: NodeJS.Timeout | null = null;
@@ -45,12 +46,20 @@ export default defineBackground(() => {
     );
   };
 
-  // Debounced version of applyGreyscale to prevent rapid repeated calls
+  // Function to determine if grayscale should be applied
+  const shouldApplyGrayscale = (domain: string, isImageOnly: boolean, settings: any): boolean => {
+    return (
+      settings.enabled &&
+      domain &&
+      !settings.blacklist.includes(domain) &&
+      !(isImageOnly && settings.imageExceptionEnabled)
+    );
+  };
+
+  // Debounced version of applyGreyscale 
   const applyGreyscaleToAllTabsDebounced = debounce(
-    (intensity: number = 100, blacklist: string[] = []) => {
-      // Get all tabs once instead of multiple individual queries
+    (intensity: number = 100, blacklist: string[] = [], imageExceptionEnabled: boolean = false) => {
       browser.tabs.query({}).then((tabs) => {
-        // Process URLs outside the loop for efficiency
         const tabsToUpdate = tabs.filter((tab) => {
           if (!tab.id || !tab.url) return false;
           const domain = getHostname(tab.url);
@@ -61,12 +70,67 @@ export default defineBackground(() => {
         if (tabsToUpdate.length > 0) {
           for (const tab of tabsToUpdate) {
             if (tab.id) {
+              const domain = getHostname(tab.url || '');
+
+              // Check if it's an image-only page
               browser.scripting
                 .executeScript({
                   target: { tabId: tab.id },
-                  func: (intensity: number) => {
-                    const fullscreenElement = getFullscreenElement();
+                  func: isImageOnlyPage,
+                })
+                .then((results) => {
+                  const isImageOnly = results?.[0]?.result || false;
 
+
+                  if (!shouldApplyGrayscale(domain, isImageOnly, {
+                    enabled: true,
+                    blacklist,
+                    imageExceptionEnabled
+                  })) {
+                    return;
+                  }
+
+                  // Apply greyscale
+                  browser.scripting
+                    .executeScript({
+                      target: { tabId: tab.id! },
+                      func: (intensity: number) => {
+                        const fullscreenElement = getFullscreenElement();
+
+                        if (
+                          fullscreenElement &&
+                          fullscreenElement instanceof HTMLElement
+                        ) {
+                          fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                          fullscreenElement.style.transition = "filter 0.2s ease";
+                        } else {
+                          let overlay = document.getElementById(
+                            "monochromate-overlay"
+                          );
+                          if (!overlay) {
+                            overlay = document.createElement("div");
+                            overlay.id = "monochromate-overlay";
+                            overlay.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100vw;
+                            height: 100vh;
+                            pointer-events: none;
+                            z-index: 100000;
+                            backdrop-filter: grayscale(${intensity}%);
+                          `;
+                            document.documentElement.appendChild(overlay);
+                          } else {
+                            overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                          }
+                        }
+                      },
+                      args: [intensity],
+                    })
+                    .catch(() => {
+                      // Silently fail for tabs that can't be modified
+                    });
                     if (
                       fullscreenElement &&
                       fullscreenElement instanceof HTMLElement
@@ -99,8 +163,50 @@ export default defineBackground(() => {
                   args: [intensity],
                 })
                 .catch(() => {
-                  // Silently fail for tabs that can't be modified
-                  // (e.g., chrome:// URLs, extension pages, etc.)
+                  // If image detection fails, apply greyscale normally
+                  const domain = getHostname(tab.url || '');
+                  if (!blacklist.includes(domain)) {
+                    browser.scripting
+                      .executeScript({
+                        target: { tabId: tab.id! },
+                        func: (intensity: number) => {
+                          const fullscreenElement = getFullscreenElement();
+
+                          if (
+                            fullscreenElement &&
+                            fullscreenElement instanceof HTMLElement
+                          ) {
+                            fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                            fullscreenElement.style.transition = "filter 0.2s ease";
+                          } else {
+                            let overlay = document.getElementById(
+                              "monochromate-overlay"
+                            );
+                            if (!overlay) {
+                              overlay = document.createElement("div");
+                              overlay.id = "monochromate-overlay";
+                              overlay.style.cssText = `
+                              position: fixed;
+                              top: 0;
+                              left: 0;
+                              width: 100vw;
+                              height: 100vh;
+                              pointer-events: none;
+                              z-index: 100000;
+                              backdrop-filter: grayscale(${intensity}%);
+                            `;
+                              document.documentElement.appendChild(overlay);
+                            } else {
+                              overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                            }
+                          }
+                        },
+                        args: [intensity],
+                      })
+                      .catch(() => {
+                        // Silently fail
+                      });
+                  }
                 });
             }
           }
@@ -247,7 +353,8 @@ export default defineBackground(() => {
 
         applyGreyscaleToAllTabsDebounced(
           currentSettings.intensity,
-          currentSettings.blacklist
+          currentSettings.blacklist,
+          currentSettings.imageExceptionEnabled ?? false
         );
       }
       settingsInitialized = true;
@@ -269,7 +376,8 @@ export default defineBackground(() => {
 
         applyGreyscaleToAllTabsDebounced(
           newSettings.intensity,
-          newSettings.blacklist
+          newSettings.blacklist,
+          newSettings.imageExceptionEnabled ?? false
         );
       } else {
         disableGreyscaleForAllTabs();
@@ -283,19 +391,35 @@ export default defineBackground(() => {
     ) {
       applyGreyscaleToAllTabsDebounced(
         newSettings.intensity,
-        newSettings.blacklist
+        newSettings.blacklist,
+        newSettings.imageExceptionEnabled ?? true
       );
     }
 
     if (
       JSON.stringify(newSettings?.blacklist) !==
       JSON.stringify(oldSettings?.blacklist) &&
+
+      newSettings?.enabled
+    ) {
+      applyGreyscaleToAllTabsDebounced(
+        newSettings.intensity,
+        newSettings.blacklist,
+        newSettings.imageExceptionEnabled ?? true
+      );
+    }
+
+    if (
+      newSettings?.imageExceptionEnabled !== oldSettings?.imageExceptionEnabled &&
+      newSettings?.enabled
+
       newSettings?.enabled &&
       !newSettings?.temporaryDisable
     ) {
       applyGreyscaleToAllTabsDebounced(
         newSettings.intensity,
-        newSettings.blacklist
+        newSettings.blacklist,
+        newSettings.imageExceptionEnabled ?? true
       );
     }
 
@@ -397,6 +521,12 @@ export default defineBackground(() => {
         await settings.setValue({
           ...currentSettings,
           blacklist: message.value,
+        });
+        break;
+      case "toggleImageException":
+        await settings.setValue({
+          ...currentSettings,
+          imageExceptionEnabled: message.value,
         });
         break;
       case "saveSchedule":
@@ -508,9 +638,13 @@ export default defineBackground(() => {
         if (tab.url) {
           const domain = getHostname(tab.url);
           if (domain && !currentSettings.blacklist.includes(domain)) {
+            // Check if it's an image-only page first
             browser.scripting
               .executeScript({
                 target: { tabId },
+
+                func: isImageOnlyPage,
+
                 func: (intensity: number) => {
                   const fullscreenElement = getFullscreenElement();
 
@@ -545,8 +679,55 @@ export default defineBackground(() => {
                 },
                 args: [currentSettings.intensity],
               })
-              .catch(() => {
-                // Ignore errors for restricted pages
+              .then((results) => {
+                const isImageOnly = results?.[0]?.result || false;
+
+                // Skip applying greyscale if it's an image-only page and exception is enabled
+                if (isImageOnly && (currentSettings.imageExceptionEnabled ?? false)) {
+                  return;
+                }
+
+                // Apply greyscale normally
+                browser.scripting
+                  .executeScript({
+                    target: { tabId },
+                    func: (intensity: number) => {
+                      const fullscreenElement = getFullscreenElement();
+
+                      if (
+                        fullscreenElement &&
+                        fullscreenElement instanceof HTMLElement
+                      ) {
+                        fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                        fullscreenElement.style.transition = "filter 0.2s ease";
+                      } else {
+                        let overlay = document.getElementById(
+                          "monochromate-overlay"
+                        );
+                        if (!overlay) {
+                          overlay = document.createElement("div");
+                          overlay.id = "monochromate-overlay";
+                          overlay.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100vw;
+                            height: 100vh;
+                            pointer-events: none;
+                            z-index: 100000;
+                            backdrop-filter: grayscale(${intensity}%);
+                          `;
+                          document.documentElement.appendChild(overlay);
+                        } else {
+                          overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                        }
+                      }
+                    },
+                    args: [currentSettings.intensity],
+                  })
+                  .catch(() => {
+                    // Ignore errors for restricted pages
+                  });
               });
           }
         }
@@ -558,14 +739,17 @@ export default defineBackground(() => {
 browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     browser.tabs.create({
-      url: `https://monochromate.lirena.in/thanks?utm_source=extension&utm_medium=install&browser=${import.meta.env.BROWSER}`,
+
+      url: `https://monochromate.lirena.in/thanks?utm_source=extension&utm_medium=install&browser=${import.meta.env.BROWSER
+        }`,
     });
   } else if (details.reason === "update") {
     const previousVersion = details.previousVersion;
     const currentVersion = browser.runtime.getManifest().version;
     if (previousVersion !== currentVersion) {
       browser.tabs.create({
-        url: `https://monochromate.lirena.in/release-notes/?utm_source=extension&utm_medium=update&browser=${import.meta.env.BROWSER}#v${currentVersion}`,
+        url: `https://monochromate.lirena.in/release-notes/?utm_source=extension&utm_medium=update&browser=${import.meta.env.BROWSER
+          }#v${currentVersion}`,
       });
     }
   }

@@ -17,6 +17,7 @@ type MonofilterTypes= {
   skipMediaPage:boolean
    temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
+  imageExceptionEnabled: boolean;
 
 };
 
@@ -30,6 +31,10 @@ export const settings = storage.defineItem<MonofilterTypes>(
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
+
+      imageExceptionEnabled: false,
+    },
+    version: 2,
       temporaryDisable: false,
       temporaryDisableUntil: null,
       skipMediaPage:true,
@@ -40,7 +45,10 @@ export const settings = storage.defineItem<MonofilterTypes>(
       2:(oldValue:MonofilterTypes_prev):MonofilterTypes=>{
         return{
           ...oldValue,
-          skipMediaPage:true
+          skipMediaPage:true,
+      temporaryDisable: false,
+      temporaryDisableUntil: null,
+      skipMediaPage:true,
           
         }
       }

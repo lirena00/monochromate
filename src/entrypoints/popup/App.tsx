@@ -33,6 +33,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
+  const [imageExceptionEnabled, setImageExceptionEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
   const [startMonochromate, setStartMonochromate] = useState("");
@@ -71,6 +72,7 @@ export default function App() {
         setEnabled(currentSettings.enabled);
         setIntensity(currentSettings.intensity);
         setBlacklist(currentSettings.blacklist);
+        setImageExceptionEnabled(currentSettings.imageExceptionEnabled ?? false);
         setStartMonochromate(currentSettings.scheduleStart);
         setEndMonochromate(currentSettings.scheduleEnd);
         setTempStartTime(currentSettings.scheduleStart);
@@ -90,6 +92,7 @@ export default function App() {
         setEnabled(newSettings.enabled);
         setIntensity(newSettings.intensity);
         setBlacklist(newSettings.blacklist);
+        setImageExceptionEnabled(newSettings.imageExceptionEnabled ?? false);
         setStartMonochromate(newSettings.scheduleStart);
         setEndMonochromate(newSettings.scheduleEnd);
         setTempStartTime(newSettings.scheduleStart);
@@ -119,6 +122,16 @@ export default function App() {
     setEnabled(newEnabled);
     browser.runtime.sendMessage({ type: "toggleGreyscale", intensity });
   }, [enabled, intensity, loading]);
+
+  const toggleImageException = useCallback(() => {
+    if (loading) return;
+    const newImageExceptionEnabled = !imageExceptionEnabled;
+    setImageExceptionEnabled(newImageExceptionEnabled);
+    browser.runtime.sendMessage({
+      type: "toggleImageException",
+      value: newImageExceptionEnabled
+    });
+  }, [imageExceptionEnabled, loading]);
 
   const changeIntensity = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,6 +204,7 @@ export default function App() {
           <Header />
           <div className="grid grid-cols-1 gap-4 flex-1">
             <WarningCard currentUrl={currentUrl} />
+
             <GreyscaleToggleCard enabled={enabled} onToggle={toggleGreyscale} />
 
             <ExcludedSitesCard
@@ -237,6 +251,8 @@ export default function App() {
           onReturnToMain={handleReturnToMain}
           onAddCurrentSite={addCurrentSite}
           onRemoveSite={removeSite}
+          imageExceptionEnabled={imageExceptionEnabled}
+          onToggleImageException={toggleImageException}
         />
       )}
     </div>
