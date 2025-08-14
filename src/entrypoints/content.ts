@@ -12,6 +12,11 @@ let currentSettings = {
   intensity: 100,
   blacklist: [] as string[],
   imageExceptionEnabled: false,
+
+  temporaryDisable: false,
+  temporaryDisableUntil: null as number | null,
+   skipMediaPage:true,
+
 };
 let isFullscreenActive = false;
 let mutationObserver: MutationObserver | null = null;
@@ -35,9 +40,25 @@ const debouncedImageCheck = (() => {
   };
 })();
 
+// // Use a single function to manage the overlay with efficient updates
+// const updateOverlay = (show: boolean, intensity: number = 100) => {
+//   // Check if we should skip media-only pages
+//   if (show && currentSettings.skipMediaOnlyPages && isMediaOnlyPage()) {
+//     show = false;
+//   }
+
+//   if (show && !isFullscreenActive) {
+//     // ...existing overlay creation code...
+//   } else if (overlayElement) {
+//     overlayElement.remove();
+//     overlayElement = null;
+//   }
+// };
+
+
 // Use a single function to manage the overlay with efficient updates
 const updateOverlay = (show: boolean, intensity: number = 100) => {
-  if (show && !isFullscreenActive) {
+  if (show && !isFullscreenActive && !currentSettings.temporaryDisable) {
     if (!overlayElement) {
       overlayElement = document.createElement("div");
       overlayElement.id = "monochromate-overlay";
@@ -48,7 +69,7 @@ const updateOverlay = (show: boolean, intensity: number = 100) => {
         width: 100vw;
         height: 100vh;
         pointer-events: none;
-        z-index: 100000;
+        z-index: 2147483647;
         backdrop-filter: grayscale(${intensity}%);
       `;
       document.documentElement.appendChild(overlayElement);
@@ -95,6 +116,7 @@ const handleFullscreenChange = () => {
   const wasFullscreen = isFullscreenActive;
   isFullscreenActive = !!fullscreenElement;
 
+
   debouncedImageCheck((isImageOnly) => {
     const shouldApply = shouldApplyGrayscale(isImageOnly);
 
@@ -121,6 +143,17 @@ const handleFullscreenChange = () => {
       if (shouldApply) {
         updateOverlay(true, currentSettings.intensity);
       }
+
+  if (isFullscreenActive && fullscreenElement) {
+    updateOverlay(false);
+    const currentSite = getCurrentHostname();
+    if (
+      currentSettings.enabled &&
+      !currentSettings.temporaryDisable &&
+      !currentSettings.blacklist.includes(currentSite)
+    ) {
+      applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
+
     }
   });
 };
@@ -172,8 +205,16 @@ const setupMutationObserver = () => {
       }
     }
 
+
     if (shouldCheck) {
       handleContentChange();
+
+    if (currentSettings.enabled && !currentSettings.temporaryDisable) {
+      const currentSite = getCurrentHostname();
+      const shouldShowOverlay =
+        !currentSettings.blacklist.includes(currentSite);
+      updateOverlay(shouldShowOverlay, currentSettings.intensity);
+
     }
   });
 
@@ -182,6 +223,82 @@ const setupMutationObserver = () => {
     subtree: true,
     attributes: false
   });
+};
+
+const isMediaOnlyPage = (): boolean => {
+  // Get all visible elements in the body
+  const bodyElements = document.body?.children;
+  if (!bodyElements || bodyElements.length === 0) return false;
+
+  let mediaElementCount = 0;
+  let totalRelevantElements = 0;
+
+  // Helper function to check if element is meaningful content
+  const isMeaningfulElement = (element: Element): boolean => {
+    if (!element) return false;
+    
+    const tagName = element.tagName.toLowerCase();
+    const style = window.getComputedStyle(element);
+    
+    // Skip hidden elements
+    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
+      return false;
+    }
+    
+    // Skip script, style, meta, link tags
+    if (['script', 'style', 'meta', 'link', 'noscript', 'head'].includes(tagName)) {
+      return false;
+    }
+    
+    return true;
+  };
+
+    // Helper function to check if element is media
+  const isMediaElement = (element: Element): boolean => {
+    const tagName = element.tagName.toLowerCase();
+    return ['img', 'video', 'audio', 'canvas', 'svg', 'picture', 'source'].includes(tagName);
+  };
+
+  // Recursively analyze elements
+  const analyzeElements = (elements: HTMLCollection) => {
+    for (let i = 0; i < elements.length; i++) {
+      const element = elements[i];
+      
+      if (!isMeaningfulElement(element)) continue;
+      
+      totalRelevantElements++;
+      
+      if (isMediaElement(element)) {
+        mediaElementCount++;
+      } else {
+        // Check if this element contains significant text content
+        const textContent = element.textContent?.trim() || '';
+        const hasSignificantText = textContent.length > 50; // More than 50 chars of text
+        
+        // If it has significant text, it's not media-only
+        if (hasSignificantText) {
+          return false;
+        }
+        
+        // Recursively check children
+        if (element.children.length > 0) {
+          const childResult = analyzeElements(element.children);
+          if (childResult === false) return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  const isMediaOnly = analyzeElements(bodyElements);
+  
+  // Consider it media-only if:
+  // 1. We found meaningful elements
+  // 2. At least 80% are media elements
+  // 3. Or if we only have media elements and minimal other content
+  const mediaRatio = totalRelevantElements > 0 ? mediaElementCount / totalRelevantElements : 0;
+  
+  return isMediaOnly && mediaRatio >= 0.8 && mediaElementCount > 0;
 };
 
 export default defineContentScript({
@@ -221,6 +338,26 @@ export default defineContentScript({
       initializeGrayscale();
     } else {
       window.addEventListener('load', initializeGrayscale);
+
+
+      temporaryDisable: initialSettings.temporaryDisable || false,
+      temporaryDisableUntil: initialSettings.temporaryDisableUntil || null,
+        skipMediaPage:initialSettings.skipMediaPage
+    };
+
+    if (
+      currentSettings.enabled &&
+      !currentSettings.temporaryDisable &&
+      !currentSettings.blacklist.includes(currentSite)
+    ) {
+      const fullscreenElement = getFullscreenElement();
+      if (fullscreenElement) {
+        isFullscreenActive = true;
+        applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
+      } else {
+        updateOverlay(true, currentSettings.intensity);
+      }
+
     }
 
     // Setup mutation observer
@@ -232,6 +369,7 @@ export default defineContentScript({
           enabled: newSettings.enabled,
           intensity: newSettings.intensity,
           blacklist: newSettings.blacklist,
+
           imageExceptionEnabled: newSettings.imageExceptionEnabled ?? false,
         };
 
@@ -239,6 +377,19 @@ export default defineContentScript({
         debouncedImageCheck((isImageOnly) => {
           const shouldApply = shouldApplyGrayscale(isImageOnly);
           const fullscreenElement = getFullscreenElement();
+
+
+          temporaryDisable: newSettings.temporaryDisable || false,
+          temporaryDisableUntil: newSettings.temporaryDisableUntil || null,
+               skipMediaPage:newSettings.skipMediaPage
+
+        };
+
+        const shouldShowOverlay =
+          newSettings.enabled &&
+          !newSettings.temporaryDisable &&
+          !newSettings.blacklist.includes(currentSite);
+
 
           if (fullscreenElement && isFullscreenActive) {
             if (shouldApply) {
@@ -253,7 +404,17 @@ export default defineContentScript({
       }
     });
 
+
     // Event listeners for fullscreen changes
+
+    // Listen for background script messages
+    browser.runtime.onMessage.addListener((message) => {
+      if (message.type === "temporaryDisableSet") {
+        console.log(`Monochromate temporarily disabled for ${message.duration} minutes`);
+      }
+    });
+
+
     ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
       document.addEventListener(event, handleFullscreenChange);
     });

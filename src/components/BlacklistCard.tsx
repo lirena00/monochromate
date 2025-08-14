@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Shield } from "lucide-react";
+import { getShortcutByName } from "@/utils/shortcuts";
+import ShortcutBadge from "@/components/ShortcutBadge";
 
 interface BlacklistCardProps {
   currentUrl: string;
@@ -10,7 +12,7 @@ interface BlacklistCardProps {
   onManageAllSites: () => void;
 }
 
-const BlacklistCardCard: React.FC<BlacklistCardProps> = ({
+const BlacklistCard: React.FC<BlacklistCardProps> = ({
   currentUrl,
   blacklist,
   isCurrentUrlBlacklisted,
@@ -18,6 +20,12 @@ const BlacklistCardCard: React.FC<BlacklistCardProps> = ({
   onRemoveSite,
   onManageAllSites,
 }) => {
+  const [shortcut, setShortcut] = useState<string>("");
+
+  useEffect(() => {
+    getShortcutByName("quick_toggle_blacklist").then(setShortcut);
+  }, []);
+
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
       <div className="flex items-center justify-between mb-3">
@@ -50,26 +58,29 @@ const BlacklistCardCard: React.FC<BlacklistCardProps> = ({
               />
             )}
           </div>
-          <span className="text-sm font-medium truncate max-w-[180px]">
+          <span className="text-sm font-medium truncate max-w-[140px]">
             {currentUrl}
           </span>
         </div>
 
-        {isCurrentUrlBlacklisted ? (
-          <button
-            onClick={() => onRemoveSite(currentUrl)}
-            className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded-sm hover:bg-neutral-300 transition-colors"
-          >
-            Remove
-          </button>
-        ) : (
-          <button
-            onClick={onAddCurrentSite}
-            className="text-xs px-2 py-1 bg-neutral-900 text-white rounded-sm hover:bg-neutral-800 transition-colors"
-          >
-            Exclude
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          <ShortcutBadge shortcut={shortcut} />
+          {isCurrentUrlBlacklisted ? (
+            <button
+              onClick={() => onRemoveSite(currentUrl)}
+              className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded-sm hover:bg-neutral-300 transition-colors"
+            >
+              Remove
+            </button>
+          ) : (
+            <button
+              onClick={onAddCurrentSite}
+              className="text-xs px-2 py-1 bg-neutral-900 text-white rounded-sm hover:bg-neutral-800 transition-colors"
+            >
+              Exclude
+            </button>
+          )}
+        </div>
       </div>
 
       <button
@@ -82,4 +93,4 @@ const BlacklistCardCard: React.FC<BlacklistCardProps> = ({
   );
 };
 
-export default BlacklistCardCard;
+export default BlacklistCard;

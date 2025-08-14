@@ -1,6 +1,8 @@
 import React from "react";
 import { ArrowLeft, Search, AlertCircle, X, Shield, Image } from "lucide-react";
 import Footer from "./Footer";
+import { getShortcutByName } from "@/utils/shortcuts";
+import ShortcutBadge from "@/components/ShortcutBadge";
 
 interface BlacklistManagementProps {
   searchTerm: string;
@@ -27,6 +29,12 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
   imageExceptionEnabled,
   onToggleImageException,
 }) => {
+  const [shortcut, setShortcut] = useState<string>("");
+
+  useEffect(() => {
+    getShortcutByName("quick_toggle_blacklist").then(setShortcut);
+  }, []);
+
   return (
     <div className="flex flex-col h-[700px] overflow-hidden">
       <div className="flex items-center gap-3 mb-6">
@@ -66,26 +74,29 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                 />
               )}
             </div>
-            <span className="text-sm font-medium truncate max-w-[200px]">
+            <span className="text-sm font-medium truncate max-w-[140px]">
               {currentUrl}
             </span>
           </div>
 
-          {isCurrentUrlBlacklisted ? (
-            <button
-              onClick={() => onRemoveSite(currentUrl)}
-              className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded-sm hover:bg-neutral-300 transition-colors"
-            >
-              Remove
-            </button>
-          ) : (
-            <button
-              onClick={onAddCurrentSite}
-              className="text-xs px-2 py-1 bg-neutral-900 text-white rounded-sm hover:bg-neutral-800 transition-colors"
-            >
-              Exclude
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            <ShortcutBadge shortcut={shortcut} />
+            {isCurrentUrlBlacklisted ? (
+              <button
+                onClick={() => onRemoveSite(currentUrl)}
+                className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded-sm hover:bg-neutral-300 transition-colors"
+              >
+                Remove
+              </button>
+            ) : (
+              <button
+                onClick={onAddCurrentSite}
+                className="text-xs px-2 py-1 bg-neutral-900 text-white rounded-sm hover:bg-neutral-800 transition-colors"
+              >
+                Exclude
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

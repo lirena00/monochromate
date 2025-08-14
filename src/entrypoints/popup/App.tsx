@@ -9,6 +9,7 @@ import IntensityCard from "@/components/IntensityCard";
 import WarningCard from "@/components/WarningCard";
 import Footer from "@/components/Footer";
 import BlacklistManagement from "@/components/BlacklistManagement";
+import TemporaryDisableCard from "@/components/TemporaryDisableCard";
 import { Loader2 } from "lucide-react";
 
 const useDebounce = (value: string, delay: number) => {
@@ -214,6 +215,8 @@ export default function App() {
               onRemoveSite={removeSite}
               onManageAllSites={() => setView("blacklist")}
             />
+
+            <TemporaryDisableCard enabled={enabled} />
 
             <ScheduleCard
               scheduleToggle={scheduleToggle}

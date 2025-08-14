@@ -1,8 +1,26 @@
 import { isImageOnlyPage } from "@/utils/ImageCheckUtil";
 import { settings } from "@/utils/storage";
 
+let temporaryDisableTimer: NodeJS.Timeout | null = null;
+
+const cleanupTemporaryDisable = () => {
+  if (temporaryDisableTimer) {
+    clearTimeout(temporaryDisableTimer);
+    temporaryDisableTimer = null;
+  }
+};
+
 export default defineBackground(() => {
   let settingsInitialized = false;
+
+  const updateBadge = (enabled: boolean) => {
+    if (enabled) {
+      browser.action.setBadgeText({ text: "ON" });
+      browser.action.setBadgeBackgroundColor({ color: "#f5f5f5" });
+    } else {
+      browser.action.setBadgeText({ text: "" });
+    }
+  };
 
   // Debounce helper to prevent too frequent tab updates
   const debounce = (func: Function, wait: number) => {
@@ -63,6 +81,7 @@ export default defineBackground(() => {
                 .then((results) => {
                   const isImageOnly = results?.[0]?.result || false;
 
+
                   if (!shouldApplyGrayscale(domain, isImageOnly, {
                     enabled: true,
                     blacklist,
@@ -112,6 +131,36 @@ export default defineBackground(() => {
                     .catch(() => {
                       // Silently fail for tabs that can't be modified
                     });
+                    if (
+                      fullscreenElement &&
+                      fullscreenElement instanceof HTMLElement
+                    ) {
+                      fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                      fullscreenElement.style.transition = "filter 0.2s ease";
+                    } else {
+                      let overlay = document.getElementById(
+                        "monochromate-overlay"
+                      );
+                      if (!overlay) {
+                        overlay = document.createElement("div");
+                        overlay.id = "monochromate-overlay";
+                        overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        pointer-events: none;
+                        z-index: 2147483647;
+                        backdrop-filter: grayscale(${intensity}%);
+                      `;
+                        document.documentElement.appendChild(overlay);
+                      } else {
+                        overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                      }
+                    }
+                  },
+                  args: [intensity],
                 })
                 .catch(() => {
                   // If image detection fails, apply greyscale normally
@@ -202,10 +251,106 @@ export default defineBackground(() => {
     });
   };
 
-  const initializeSettings = async () => {
+  // Handle temporary disable
+  const setTemporaryDisable = async (minutes: number) => {
+    try {
+      cleanupTemporaryDisable();
+
+      const currentSettings = await settings.getValue();
+      const disableUntil = Date.now() + (minutes * 60 * 1000);
+      await settings.setValue({
+        ...currentSettings,
+        enabled: false,
+        temporaryDisable: true,
+        temporaryDisableUntil: disableUntil
+      });
+
+      temporaryDisableTimer = setTimeout(async () => {
+        try {
+          const latestSettings = await settings.getValue();
+          await settings.setValue({
+            ...latestSettings,
+            enabled: true,
+            temporaryDisable: false,
+            temporaryDisableUntil: null
+          });
+        } catch (error) {
+          console.error('Failed to re-enable after timeout:', error);
+        } finally {
+          temporaryDisableTimer = null;
+        }
+      }, minutes * 60 * 1000);
+
+      browser.runtime.sendMessage({
+        type: "temporaryDisableSet",
+        duration: minutes,
+        until: disableUntil
+      }).catch(error => {
+        console.error('Failed to send temporary disable notification:', error);
+      });
+    } catch (error) {
+      console.error('Error in setTemporaryDisable:', error);
+      throw error;
+    }
+  };
+
+  // Check if temporary disable has expired on startup
+  const checkTemporaryDisableExpiry = async () => {
     try {
       const currentSettings = await settings.getValue();
-      if (currentSettings.enabled) {
+      if (!currentSettings.temporaryDisable || !currentSettings.temporaryDisableUntil) {
+        return;
+      }
+
+      const now = Date.now();
+      const disableUntil = currentSettings.temporaryDisableUntil;
+
+      if (now >= disableUntil) {
+        // Expired, re-enable
+        await settings.setValue({
+          ...currentSettings,
+          enabled: true,
+          temporaryDisable: false,
+          temporaryDisableUntil: null
+        });
+      } else {
+        const remainingTime = disableUntil - now;
+        cleanupTemporaryDisable();
+        
+        temporaryDisableTimer = setTimeout(async () => {
+          try {
+            const latestSettings = await settings.getValue();
+            await settings.setValue({
+              ...latestSettings,
+              enabled: true,
+              temporaryDisable: false,
+              temporaryDisableUntil: null
+            });
+          } catch (error) {
+            console.error('Failed to re-enable after temporary disable expired:', error);
+          } finally {
+            temporaryDisableTimer = null;
+          }
+        }, remainingTime);
+      }
+    } catch (error) {
+      console.error('Error in checkTemporaryDisableExpiry:', error);
+    }
+  };
+
+  browser.runtime.onSuspend.addListener(() => {
+    cleanupTemporaryDisable();
+  });
+
+  const initializeSettings = async () => {
+    try {
+      await checkTemporaryDisableExpiry();
+      const currentSettings = await settings.getValue();
+
+      if (currentSettings.enabled && !currentSettings.temporaryDisable) {
+
+      updateBadge(currentSettings.enabled);
+
         applyGreyscaleToAllTabsDebounced(
           currentSettings.intensity,
           currentSettings.blacklist,
@@ -223,7 +368,12 @@ export default defineBackground(() => {
     if (!settingsInitialized) return;
 
     if (newSettings?.enabled !== oldSettings?.enabled) {
-      if (newSettings?.enabled) {
+
+      if (newSettings?.enabled && !newSettings?.temporaryDisable) {
+
+      updateBadge(newSettings.enabled);
+     
+
         applyGreyscaleToAllTabsDebounced(
           newSettings.intensity,
           newSettings.blacklist,
@@ -236,7 +386,8 @@ export default defineBackground(() => {
 
     if (
       newSettings?.intensity !== oldSettings?.intensity &&
-      newSettings?.enabled
+      newSettings?.enabled &&
+      !newSettings?.temporaryDisable
     ) {
       applyGreyscaleToAllTabsDebounced(
         newSettings.intensity,
@@ -248,6 +399,7 @@ export default defineBackground(() => {
     if (
       JSON.stringify(newSettings?.blacklist) !==
       JSON.stringify(oldSettings?.blacklist) &&
+
       newSettings?.enabled
     ) {
       applyGreyscaleToAllTabsDebounced(
@@ -260,6 +412,9 @@ export default defineBackground(() => {
     if (
       newSettings?.imageExceptionEnabled !== oldSettings?.imageExceptionEnabled &&
       newSettings?.enabled
+
+      newSettings?.enabled &&
+      !newSettings?.temporaryDisable
     ) {
       applyGreyscaleToAllTabsDebounced(
         newSettings.intensity,
@@ -324,10 +479,13 @@ export default defineBackground(() => {
       currentSettings.schedule &&
       settingsInitialized
     ) {
-      await settings.setValue({
-        ...currentSettings,
-        enabled: true,
-      });
+      // Don't override temporary disable
+      if (!currentSettings.temporaryDisable) {
+        await settings.setValue({
+          ...currentSettings,
+          enabled: true,
+        });
+      }
     } else if (
       alarm.name === "EndMonochromate" &&
       currentSettings.schedule &&
@@ -344,9 +502,13 @@ export default defineBackground(() => {
     const currentSettings = await settings.getValue();
     switch (message.type) {
       case "toggleGreyscale":
+        // Clear temporary disable when manually toggling
+        cleanupTemporaryDisable();
         await settings.setValue({
           ...currentSettings,
           enabled: !currentSettings.enabled,
+          temporaryDisable: false,
+          temporaryDisableUntil: null
         });
         break;
       case "setIntensity":
@@ -382,13 +544,96 @@ export default defineBackground(() => {
         });
         updateScheduleAlarm();
         break;
+      case "temporaryDisable":
+        await setTemporaryDisable(message.minutes);
+        break;
+      case "cancelTemporaryDisable":
+        cleanupTemporaryDisable();
+        await settings.setValue({
+          ...currentSettings,
+          enabled: true,
+          temporaryDisable: false,
+          temporaryDisableUntil: null
+        });
+        break;
+      case "getTemporaryDisableStatus":
+        // Send back current temporary disable status
+        browser.runtime.sendMessage({
+          type: "temporaryDisableStatus",
+          isActive: currentSettings.temporaryDisable,
+          until: currentSettings.temporaryDisableUntil,
+          remainingMinutes: currentSettings.temporaryDisableUntil ?
+            Math.ceil((currentSettings.temporaryDisableUntil - Date.now()) / (60 * 1000)) : 0
+        });
+        break;
+    }
+  });
+
+  browser.commands.onCommand.addListener(async (command) => {
+    const currentSettings = await settings.getValue();
+
+    switch (command) {
+      case "toggle_greyscale":
+        await settings.setValue({
+          ...currentSettings,
+          enabled: !currentSettings.enabled,
+        });
+        break;
+
+      case "quick_toggle_blacklist":
+        browser.tabs
+          .query({ active: true, currentWindow: true })
+          .then((tabs) => {
+            const currentTab = tabs[0];
+            if (currentTab?.url) {
+              const domain = getHostname(currentTab.url);
+              if (domain) {
+                const isCurrentUrlBlacklisted =
+                  currentSettings.blacklist.includes(domain);
+
+                if (isCurrentUrlBlacklisted) {
+                  const updatedBlacklist = currentSettings.blacklist.filter(
+                    (site) => site !== domain
+                  );
+                  settings.setValue({
+                    ...currentSettings,
+                    blacklist: updatedBlacklist,
+                  });
+                } else {
+                  settings.setValue({
+                    ...currentSettings,
+                    blacklist: [...currentSettings.blacklist, domain],
+                  });
+                }
+              }
+            }
+          });
+        break;
+
+      case "increase_intensity":
+        if (!currentSettings.enabled) break;
+        const newIntensityUp = Math.min(100, currentSettings.intensity + 10);
+        await settings.setValue({
+          ...currentSettings,
+          intensity: newIntensityUp,
+        });
+        break;
+
+      case "decrease_intensity":
+        if (!currentSettings.enabled) break;
+        const newIntensityDown = Math.max(0, currentSettings.intensity - 10);
+        await settings.setValue({
+          ...currentSettings,
+          intensity: newIntensityDown,
+        });
+        break;
     }
   });
 
   // Listen for tab updates to apply greyscale to new tabs
   browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     const currentSettings = await settings.getValue();
-    if (changeInfo.status === "complete" && currentSettings.enabled) {
+    if (changeInfo.status === "complete" && currentSettings.enabled && !currentSettings.temporaryDisable) {
       browser.tabs.get(tabId).then((tab) => {
         if (tab.url) {
           const domain = getHostname(tab.url);
@@ -397,7 +642,42 @@ export default defineBackground(() => {
             browser.scripting
               .executeScript({
                 target: { tabId },
+
                 func: isImageOnlyPage,
+
+                func: (intensity: number) => {
+                  const fullscreenElement = getFullscreenElement();
+
+                  if (
+                    fullscreenElement &&
+                    fullscreenElement instanceof HTMLElement
+                  ) {
+                    fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                    fullscreenElement.style.transition = "filter 0.2s ease";
+                  } else {
+                    let overlay = document.getElementById(
+                      "monochromate-overlay"
+                    );
+                    if (!overlay) {
+                      overlay = document.createElement("div");
+                      overlay.id = "monochromate-overlay";
+                      overlay.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100vw;
+                        height: 100vh;
+                        pointer-events: none;
+                        z-index: 2147483647;
+                        backdrop-filter: grayscale(${intensity}%);
+                      `;
+                      document.documentElement.appendChild(overlay);
+                    } else {
+                      overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                    }
+                  }
+                },
+                args: [currentSettings.intensity],
               })
               .then((results) => {
                 const isImageOnly = results?.[0]?.result || false;
@@ -459,6 +739,7 @@ export default defineBackground(() => {
 browser.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
     browser.tabs.create({
+
       url: `https://monochromate.lirena.in/thanks?utm_source=extension&utm_medium=install&browser=${import.meta.env.BROWSER
         }`,
     });
