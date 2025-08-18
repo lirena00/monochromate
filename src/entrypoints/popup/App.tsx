@@ -33,7 +33,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
-  const [imageExceptionEnabled, setImageExceptionEnabled] = useState(false);
+  const [mediaExceptionEnabled, setMediaExceptionEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
   const [startMonochromate, setStartMonochromate] = useState("");
@@ -41,6 +41,7 @@ export default function App() {
   const [tempStartTime, setTempStartTime] = useState("");
   const [tempEndTime, setTempEndTime] = useState("");
   const [scheduleToggle, setScheduleToggle] = useState(false);
+  const [isTemporaryDisabled, setIsTemporaryDisabled] = useState(false);
   const [view, setView] = useState<"main" | "blacklist">("main");
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -54,8 +55,8 @@ export default function App() {
     () =>
       debouncedSearchTerm
         ? blacklist.filter((site) =>
-          site.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
-        )
+            site.toLowerCase().includes(debouncedSearchTerm.toLowerCase())
+          )
         : blacklist,
     [blacklist, debouncedSearchTerm]
   );
@@ -72,7 +73,9 @@ export default function App() {
         setEnabled(currentSettings.enabled);
         setIntensity(currentSettings.intensity);
         setBlacklist(currentSettings.blacklist);
-        setImageExceptionEnabled(currentSettings.imageExceptionEnabled ?? false);
+        setMediaExceptionEnabled(
+          currentSettings.mediaExceptionEnabled ?? false
+        );
         setStartMonochromate(currentSettings.scheduleStart);
         setEndMonochromate(currentSettings.scheduleEnd);
         setTempStartTime(currentSettings.scheduleStart);
@@ -92,7 +95,7 @@ export default function App() {
         setEnabled(newSettings.enabled);
         setIntensity(newSettings.intensity);
         setBlacklist(newSettings.blacklist);
-        setImageExceptionEnabled(newSettings.imageExceptionEnabled ?? false);
+        setMediaExceptionEnabled(newSettings.mediaExceptionEnabled ?? false);
         setStartMonochromate(newSettings.scheduleStart);
         setEndMonochromate(newSettings.scheduleEnd);
         setTempStartTime(newSettings.scheduleStart);
@@ -123,15 +126,15 @@ export default function App() {
     browser.runtime.sendMessage({ type: "toggleGreyscale", intensity });
   }, [enabled, intensity, loading]);
 
-  const toggleImageException = useCallback(() => {
+  const toggleMediaException = useCallback(() => {
     if (loading) return;
-    const newImageExceptionEnabled = !imageExceptionEnabled;
-    setImageExceptionEnabled(newImageExceptionEnabled);
+    const newMediaExceptionEnabled = !mediaExceptionEnabled;
+    setMediaExceptionEnabled(newMediaExceptionEnabled);
     browser.runtime.sendMessage({
-      type: "toggleImageException",
-      value: newImageExceptionEnabled
+      type: "toggleMediaException",
+      value: newMediaExceptionEnabled,
     });
-  }, [imageExceptionEnabled, loading]);
+  }, [mediaExceptionEnabled, loading]);
 
   const changeIntensity = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -205,8 +208,15 @@ export default function App() {
           <div className="grid grid-cols-1 gap-4 flex-1">
             <WarningCard currentUrl={currentUrl} />
 
-            <GreyscaleToggleCard enabled={enabled} onToggle={toggleGreyscale} />
-
+            <GreyscaleToggleCard
+              enabled={enabled}
+              onToggle={toggleGreyscale}
+              isTemporaryDisabled={isTemporaryDisabled}
+            />
+            <TemporaryDisableCard
+              enabled={enabled}
+              onTemporaryStateChange={setIsTemporaryDisabled}
+            />
             <ExcludedSitesCard
               currentUrl={currentUrl}
               blacklist={blacklist}
@@ -215,8 +225,6 @@ export default function App() {
               onRemoveSite={removeSite}
               onManageAllSites={() => setView("blacklist")}
             />
-
-            <TemporaryDisableCard enabled={enabled} />
 
             <ScheduleCard
               scheduleToggle={scheduleToggle}
@@ -251,8 +259,8 @@ export default function App() {
           onReturnToMain={handleReturnToMain}
           onAddCurrentSite={addCurrentSite}
           onRemoveSite={removeSite}
-          imageExceptionEnabled={imageExceptionEnabled}
-          onToggleImageException={toggleImageException}
+          mediaExceptionEnabled={mediaExceptionEnabled}
+          onToggleMediaException={toggleMediaException}
         />
       )}
     </div>
