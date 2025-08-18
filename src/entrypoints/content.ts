@@ -1,62 +1,59 @@
 import { ContentScriptContext } from "#imports";
-import { isDirectImageUrl, isImageOnlyPage } from "@/utils/ImageCheckUtil";
+import { isDirectMediaUrl, isMediaOnlyPage, clearMediaCheckCache } from "@/utils/MediaCheckUtil";
 
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
 };
 
-// Cache DOM nodes and reduce layout operations
 let overlayElement: HTMLDivElement | null = null;
 let currentSettings = {
   enabled: false,
   intensity: 100,
   blacklist: [] as string[],
-  imageExceptionEnabled: false,
-
   temporaryDisable: false,
   temporaryDisableUntil: null as number | null,
-   skipMediaPage:true,
-
+  imageExceptionEnabled: false,
 };
+
 let isFullscreenActive = false;
 let mutationObserver: MutationObserver | null = null;
-let lastImageCheckTime = 0;
-let lastImageCheckResult = false;
 
-// Debounced image check to prevent excessive recalculations
-const debouncedImageCheck = (() => {
+// Cache media check result for the current page
+let cachedMediaOnlyResult: boolean | null = null;
+let lastUrl = "";
+
+// Reduced debounce time for better responsiveness
+const createDebouncer = (delay: number) => {
   let timeout: number;
-  return (callback: (isImageOnly: boolean) => void) => {
+  return (callback: () => void) => {
     clearTimeout(timeout);
-    timeout = setTimeout(() => {
-      const now = Date.now();
-      // Cache result for 2 seconds to prevent excessive checks
-      if (now - lastImageCheckTime > 2000) {
-        lastImageCheckResult = isImageOnlyPage();
-        lastImageCheckTime = now;
-      }
-      callback(lastImageCheckResult);
-    }, 300) as unknown as number;
+    timeout = setTimeout(callback, delay) as unknown as number;
   };
-})();
+};
 
-// // Use a single function to manage the overlay with efficient updates
-// const updateOverlay = (show: boolean, intensity: number = 100) => {
-//   // Check if we should skip media-only pages
-//   if (show && currentSettings.skipMediaOnlyPages && isMediaOnlyPage()) {
-//     show = false;
-//   }
+const quickMediaCheck = createDebouncer(50); // Much faster debounce
+const mediumMediaCheck = createDebouncer(150); // For mutation observer
 
-//   if (show && !isFullscreenActive) {
-//     // ...existing overlay creation code...
-//   } else if (overlayElement) {
-//     overlayElement.remove();
-//     overlayElement = null;
-//   }
-// };
+const getMediaOnlyStatus = (): boolean => {
+  const currentUrl = window.location.href;
+  
+  // Clear cache if URL changed
+  if (currentUrl !== lastUrl) {
+    cachedMediaOnlyResult = null;
+    lastUrl = currentUrl;
+    clearMediaCheckCache();
+  }
+  
+  // Use cached result if available
+  if (cachedMediaOnlyResult !== null) {
+    return cachedMediaOnlyResult;
+  }
+  
+  // Compute and cache result
+  cachedMediaOnlyResult = isMediaOnlyPage();
+  return cachedMediaOnlyResult;
+};
 
-
-// Use a single function to manage the overlay with efficient updates
 const updateOverlay = (show: boolean, intensity: number = 100) => {
   if (show && !isFullscreenActive && !currentSettings.temporaryDisable) {
     if (!overlayElement) {
@@ -97,18 +94,30 @@ const removeFullscreenGreyscale = (element: Element) => {
 };
 
 const getFullscreenElement = (): Element | null => {
-  return (
-    document.fullscreenElement || (document as any).webkitFullscreenElement
-  );
+  return document.fullscreenElement || (document as any).webkitFullscreenElement;
 };
 
-// Improved function to determine if grayscale should be applied
-const shouldApplyGrayscale = (isImageOnly: boolean): boolean => {
+const shouldApplyGrayscale = (): boolean => {
   const currentSite = getCurrentHostname();
   const isBlacklisted = currentSettings.blacklist.includes(currentSite);
-  const isImageException = isImageOnly && currentSettings.imageExceptionEnabled;
+  const isMediaOnly = getMediaOnlyStatus();
+  const isMediaException = isMediaOnly && currentSettings.imageExceptionEnabled;
+  return currentSettings.enabled && !isBlacklisted && !isMediaException;
+};
 
-  return currentSettings.enabled && !isBlacklisted && !isImageException;
+const applyGrayscaleEffect = () => {
+  const shouldApply = shouldApplyGrayscale();
+  const fullscreenElement = getFullscreenElement();
+
+  if (isFullscreenActive && fullscreenElement) {
+    if (shouldApply) {
+      applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
+    } else {
+      removeFullscreenGreyscale(fullscreenElement);
+    }
+  } else {
+    updateOverlay(shouldApply, currentSettings.intensity);
+  }
 };
 
 const handleFullscreenChange = () => {
@@ -116,197 +125,68 @@ const handleFullscreenChange = () => {
   const wasFullscreen = isFullscreenActive;
   isFullscreenActive = !!fullscreenElement;
 
-
-  debouncedImageCheck((isImageOnly) => {
-    const shouldApply = shouldApplyGrayscale(isImageOnly);
-
-    if (isFullscreenActive && fullscreenElement) {
-      updateOverlay(false);
-      if (shouldApply) {
-        applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
-      }
-    } else if (wasFullscreen) {
-      if (fullscreenElement) {
-        removeFullscreenGreyscale(fullscreenElement);
-      }
-
-      document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
-        if (
-          element instanceof HTMLElement &&
-          element.style.filter.includes("grayscale")
-        ) {
-          removeFullscreenGreyscale(element);
-        }
-      });
-
-      // Apply overlay if needed
-      if (shouldApply) {
-        updateOverlay(true, currentSettings.intensity);
-      }
-
   if (isFullscreenActive && fullscreenElement) {
     updateOverlay(false);
-    const currentSite = getCurrentHostname();
-    if (
-      currentSettings.enabled &&
-      !currentSettings.temporaryDisable &&
-      !currentSettings.blacklist.includes(currentSite)
-    ) {
-      applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
-
-    }
-  });
-};
-
-// Function to handle content changes
-const handleContentChange = () => {
-  // Don't check too frequently
-  debouncedImageCheck((isImageOnly) => {
-    const shouldApply = shouldApplyGrayscale(isImageOnly);
-    const fullscreenElement = getFullscreenElement();
-
-    if (fullscreenElement && isFullscreenActive) {
-      if (shouldApply) {
-        applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
-      } else {
-        removeFullscreenGreyscale(fullscreenElement);
+  } else if (wasFullscreen) {
+    // Clean up any fullscreen grayscale
+    document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
+      if (element instanceof HTMLElement && element.style.filter.includes("grayscale")) {
+        removeFullscreenGreyscale(element);
       }
-    } else {
-      updateOverlay(shouldApply, currentSettings.intensity);
-    }
-  });
+    });
+  }
+
+  // Apply effect immediately without debounce for fullscreen changes
+  applyGrayscaleEffect();
 };
 
-// Setup mutation observer to detect dynamic content changes
 const setupMutationObserver = () => {
   if (mutationObserver) {
     mutationObserver.disconnect();
   }
-
+  
   mutationObserver = new MutationObserver((mutations) => {
-    let shouldCheck = false;
-
+    let hasSignificantChange = false;
+    
+    // Only check for significant changes that might affect media detection
     for (const mutation of mutations) {
-      // Check if significant changes occurred
-      if (mutation.type === 'childList') {
-        // New images or videos added/removed
-        const hasMediaChanges = Array.from(mutation.addedNodes)
-          .concat(Array.from(mutation.removedNodes))
-          .some(node =>
-            node instanceof Element &&
-            (node.tagName === 'IMG' || node.tagName === 'VIDEO' || node.tagName === 'CANVAS' ||
-              node.querySelector && node.querySelector('img, video, canvas'))
-          );
-
+      if (mutation.type === "childList") {
+        const hasMediaChanges = [...mutation.addedNodes, ...mutation.removedNodes].some(
+          (node) => {
+            if (!(node instanceof Element)) return false;
+            return node.tagName === "IMG" || 
+                   node.tagName === "VIDEO" || 
+                   (node.querySelector && (node.querySelector("img") || node.querySelector("video")));
+          }
+        );
         if (hasMediaChanges) {
-          shouldCheck = true;
+          hasSignificantChange = true;
           break;
         }
       }
     }
 
-
-    if (shouldCheck) {
-      handleContentChange();
-
-    if (currentSettings.enabled && !currentSettings.temporaryDisable) {
-      const currentSite = getCurrentHostname();
-      const shouldShowOverlay =
-        !currentSettings.blacklist.includes(currentSite);
-      updateOverlay(shouldShowOverlay, currentSettings.intensity);
-
+    if (hasSignificantChange) {
+      // Clear cache since content changed
+      cachedMediaOnlyResult = null;
+      
+      // Use medium debounce for mutation changes
+      mediumMediaCheck(() => {
+        applyGrayscaleEffect();
+      });
     }
   });
 
   mutationObserver.observe(document.body || document.documentElement, {
     childList: true,
     subtree: true,
-    attributes: false
+    attributes: false,
   });
-};
-
-const isMediaOnlyPage = (): boolean => {
-  // Get all visible elements in the body
-  const bodyElements = document.body?.children;
-  if (!bodyElements || bodyElements.length === 0) return false;
-
-  let mediaElementCount = 0;
-  let totalRelevantElements = 0;
-
-  // Helper function to check if element is meaningful content
-  const isMeaningfulElement = (element: Element): boolean => {
-    if (!element) return false;
-    
-    const tagName = element.tagName.toLowerCase();
-    const style = window.getComputedStyle(element);
-    
-    // Skip hidden elements
-    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') {
-      return false;
-    }
-    
-    // Skip script, style, meta, link tags
-    if (['script', 'style', 'meta', 'link', 'noscript', 'head'].includes(tagName)) {
-      return false;
-    }
-    
-    return true;
-  };
-
-    // Helper function to check if element is media
-  const isMediaElement = (element: Element): boolean => {
-    const tagName = element.tagName.toLowerCase();
-    return ['img', 'video', 'audio', 'canvas', 'svg', 'picture', 'source'].includes(tagName);
-  };
-
-  // Recursively analyze elements
-  const analyzeElements = (elements: HTMLCollection) => {
-    for (let i = 0; i < elements.length; i++) {
-      const element = elements[i];
-      
-      if (!isMeaningfulElement(element)) continue;
-      
-      totalRelevantElements++;
-      
-      if (isMediaElement(element)) {
-        mediaElementCount++;
-      } else {
-        // Check if this element contains significant text content
-        const textContent = element.textContent?.trim() || '';
-        const hasSignificantText = textContent.length > 50; // More than 50 chars of text
-        
-        // If it has significant text, it's not media-only
-        if (hasSignificantText) {
-          return false;
-        }
-        
-        // Recursively check children
-        if (element.children.length > 0) {
-          const childResult = analyzeElements(element.children);
-          if (childResult === false) return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  const isMediaOnly = analyzeElements(bodyElements);
-  
-  // Consider it media-only if:
-  // 1. We found meaningful elements
-  // 2. At least 80% are media elements
-  // 3. Or if we only have media elements and minimal other content
-  const mediaRatio = totalRelevantElements > 0 ? mediaElementCount / totalRelevantElements : 0;
-  
-  return isMediaOnly && mediaRatio >= 0.8 && mediaElementCount > 0;
 };
 
 export default defineContentScript({
   matches: ["<all_urls>"],
   async main(ctx: ContentScriptContext) {
-    // Check if URL is a direct image file - moved inside main function
-    const isDirectImage = isDirectImageUrl(window.location.href);
-    
     const currentSite = getCurrentHostname();
     const initialSettings = await settings.getValue();
 
@@ -314,137 +194,91 @@ export default defineContentScript({
       enabled: initialSettings.enabled,
       intensity: initialSettings.intensity,
       blacklist: initialSettings.blacklist,
-      imageExceptionEnabled: initialSettings.imageExceptionEnabled ?? false,
+      imageExceptionEnabled: initialSettings.mediaExceptionEnabled,
+      temporaryDisable: initialSettings.temporaryDisable,
+      temporaryDisableUntil: initialSettings.temporaryDisableUntil,
     };
 
     const initializeGrayscale = () => {
-      debouncedImageCheck((isImageOnly) => {
-        const shouldApply = shouldApplyGrayscale(isImageOnly);
-
-        if (shouldApply) {
-          const fullscreenElement = getFullscreenElement();
-          if (fullscreenElement) {
-            isFullscreenActive = true;
-            applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
-          } else {
-            updateOverlay(true, currentSettings.intensity);
-          }
-        }
+      // Use quick debounce for initial load
+      quickMediaCheck(() => {
+        applyGrayscaleEffect();
       });
     };
 
-    // Initialize after page load
-    if (document.readyState === 'complete') {
+    if (document.readyState === "complete") {
       initializeGrayscale();
     } else {
-      window.addEventListener('load', initializeGrayscale);
-
-
-      temporaryDisable: initialSettings.temporaryDisable || false,
-      temporaryDisableUntil: initialSettings.temporaryDisableUntil || null,
-        skipMediaPage:initialSettings.skipMediaPage
-    };
-
-    if (
-      currentSettings.enabled &&
-      !currentSettings.temporaryDisable &&
-      !currentSettings.blacklist.includes(currentSite)
-    ) {
-      const fullscreenElement = getFullscreenElement();
-      if (fullscreenElement) {
-        isFullscreenActive = true;
-        applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
-      } else {
-        updateOverlay(true, currentSettings.intensity);
-      }
-
+      window.addEventListener("load", initializeGrayscale);
     }
 
-    // Setup mutation observer
     setupMutationObserver();
 
-    const unwatchSettings = settings.watch((newSettings, oldSettings) => {
+    const unwatchSettings = settings.watch((newSettings) => {
       if (newSettings) {
         currentSettings = {
           enabled: newSettings.enabled,
           intensity: newSettings.intensity,
           blacklist: newSettings.blacklist,
-
-          imageExceptionEnabled: newSettings.imageExceptionEnabled ?? false,
+          temporaryDisable: newSettings.temporaryDisable,
+          temporaryDisableUntil: newSettings.temporaryDisableUntil,
+          imageExceptionEnabled: newSettings.mediaExceptionEnabled,
         };
-
-        // Re-evaluate when settings change
-        debouncedImageCheck((isImageOnly) => {
-          const shouldApply = shouldApplyGrayscale(isImageOnly);
-          const fullscreenElement = getFullscreenElement();
-
-
-          temporaryDisable: newSettings.temporaryDisable || false,
-          temporaryDisableUntil: newSettings.temporaryDisableUntil || null,
-               skipMediaPage:newSettings.skipMediaPage
-
-        };
-
-        const shouldShowOverlay =
-          newSettings.enabled &&
-          !newSettings.temporaryDisable &&
-          !newSettings.blacklist.includes(currentSite);
-
-
-          if (fullscreenElement && isFullscreenActive) {
-            if (shouldApply) {
-              applyFullscreenGreyscale(fullscreenElement, newSettings.intensity);
-            } else {
-              removeFullscreenGreyscale(fullscreenElement);
-            }
-          } else {
-            updateOverlay(shouldApply, newSettings.intensity);
-          }
-        });
+        
+        // Apply changes immediately for settings updates
+        applyGrayscaleEffect();
       }
     });
 
+    // Initial application
+    if (currentSettings.enabled && !currentSettings.temporaryDisable && 
+        !currentSettings.blacklist.includes(currentSite)) {
+      applyGrayscaleEffect();
+    }
 
-    // Event listeners for fullscreen changes
-
-    // Listen for background script messages
     browser.runtime.onMessage.addListener((message) => {
       if (message.type === "temporaryDisableSet") {
         console.log(`Monochromate temporarily disabled for ${message.duration} minutes`);
       }
     });
 
-
     ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
       document.addEventListener(event, handleFullscreenChange);
     });
 
-    // Cleanup function
+    // Clear cache on navigation
+    const handleNavigation = () => {
+      cachedMediaOnlyResult = null;
+      clearMediaCheckCache();
+    };
+    
+    window.addEventListener("beforeunload", handleNavigation);
+    window.addEventListener("popstate", handleNavigation);
+
     ctx.onInvalidated(() => {
       ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
         document.removeEventListener(event, handleFullscreenChange);
       });
-
-      window.removeEventListener('load', initializeGrayscale);
+      
+      window.removeEventListener("load", initializeGrayscale);
+      window.removeEventListener("beforeunload", handleNavigation);
+      window.removeEventListener("popstate", handleNavigation);
 
       if (mutationObserver) {
         mutationObserver.disconnect();
         mutationObserver = null;
       }
-
       if (overlayElement) {
         overlayElement.remove();
         overlayElement = null;
       }
-
       document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
-        if (
-          element instanceof HTMLElement &&
-          element.style.filter.includes("grayscale")
-        ) {
+        if (element instanceof HTMLElement && element.style.filter.includes("grayscale")) {
           removeFullscreenGreyscale(element);
         }
       });
+      unwatchSettings();
+      clearMediaCheckCache();
     });
   },
 });

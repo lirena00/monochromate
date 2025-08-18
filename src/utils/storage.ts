@@ -5,20 +5,17 @@ type MonofilterTypes_prev = {
   scheduleStart: string;
   scheduleEnd: string;
   schedule: boolean;
-
 };
-type MonofilterTypes= {
+type MonofilterTypes = {
   enabled: boolean;
   intensity: number;
   blacklist: string[];
   scheduleStart: string;
   scheduleEnd: string;
   schedule: boolean;
-  skipMediaPage:boolean
-   temporaryDisable: boolean;
+  temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
-  imageExceptionEnabled: boolean;
-
+  mediaExceptionEnabled: boolean;
 };
 
 export const settings = storage.defineItem<MonofilterTypes>(
@@ -31,30 +28,22 @@ export const settings = storage.defineItem<MonofilterTypes>(
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
-
-      imageExceptionEnabled: false,
-    },
-    version: 2,
       temporaryDisable: false,
       temporaryDisableUntil: null,
-      skipMediaPage:true,
-
+      mediaExceptionEnabled: false,
     },
     version: 2,
-    migrations:{
-      2:(oldValue:MonofilterTypes_prev):MonofilterTypes=>{
-        return{
+    migrations: {
+      2: (oldValue: MonofilterTypes_prev): MonofilterTypes => {
+        return {
           ...oldValue,
-          skipMediaPage:true,
-      temporaryDisable: false,
-      temporaryDisableUntil: null,
-      skipMediaPage:true,
-          
-        }
-      }
-    }
+          temporaryDisable: false,
+          temporaryDisableUntil: null,
+          mediaExceptionEnabled: false,
+        };
+      },
+    },
   }
-  
 );
 
-export type Settings=MonofilterTypes;
+export type Settings = MonofilterTypes;
