@@ -66,7 +66,7 @@ export default defineBackground(() => {
   };
 
   // Debounced version of applyGreyscale
-    const applyGreyscaleToAllTabsDebounced = debounce(
+  const applyGreyscaleToAllTabsDebounced = debounce(
     (
       intensity: number = 100,
       blacklist: string[] = [],
@@ -103,7 +103,6 @@ export default defineBackground(() => {
                   ) {
                     return;
                   }
-
 
                   // Apply greyscale
                   browser.scripting
@@ -675,7 +674,6 @@ export default defineBackground(() => {
                 if (isMediaOnly && currentSettings.mediaExceptionEnabled) {
                   return;
                 }
-
 
                 // Apply greyscale normally
                 browser.scripting

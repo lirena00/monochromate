@@ -102,11 +102,13 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
 
           {/* Media Exception */}
           <div className="flex items-center justify-between pt-3 border-t border-neutral-200">
-            <span className="text-sm text-neutral-600">Exclude media-only pages</span>
+            <span className="text-sm text-neutral-600">
+              Exclude media-only pages
+            </span>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="sr-only peer" 
+              <input
+                type="checkbox"
+                className="sr-only peer"
                 checked={mediaExceptionEnabled}
                 onChange={onToggleMediaException}
               />

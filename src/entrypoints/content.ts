@@ -1,5 +1,9 @@
 import { ContentScriptContext } from "#imports";
-import { isDirectMediaUrl, isMediaOnlyPage, clearMediaCheckCache } from "@/utils/MediaCheckUtil";
+import {
+  isDirectMediaUrl,
+  isMediaOnlyPage,
+  clearMediaCheckCache,
+} from "@/utils/MediaCheckUtil";
 
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
@@ -36,19 +40,19 @@ const mediumMediaCheck = createDebouncer(150); // For mutation observer
 
 const getMediaOnlyStatus = (): boolean => {
   const currentUrl = window.location.href;
-  
+
   // Clear cache if URL changed
   if (currentUrl !== lastUrl) {
     cachedMediaOnlyResult = null;
     lastUrl = currentUrl;
     clearMediaCheckCache();
   }
-  
+
   // Use cached result if available
   if (cachedMediaOnlyResult !== null) {
     return cachedMediaOnlyResult;
   }
-  
+
   // Compute and cache result
   cachedMediaOnlyResult = isMediaOnlyPage();
   return cachedMediaOnlyResult;
@@ -94,7 +98,9 @@ const removeFullscreenGreyscale = (element: Element) => {
 };
 
 const getFullscreenElement = (): Element | null => {
-  return document.fullscreenElement || (document as any).webkitFullscreenElement;
+  return (
+    document.fullscreenElement || (document as any).webkitFullscreenElement
+  );
 };
 
 const shouldApplyGrayscale = (): boolean => {
@@ -130,7 +136,10 @@ const handleFullscreenChange = () => {
   } else if (wasFullscreen) {
     // Clean up any fullscreen grayscale
     document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
-      if (element instanceof HTMLElement && element.style.filter.includes("grayscale")) {
+      if (
+        element instanceof HTMLElement &&
+        element.style.filter.includes("grayscale")
+      ) {
         removeFullscreenGreyscale(element);
       }
     });
@@ -144,21 +153,25 @@ const setupMutationObserver = () => {
   if (mutationObserver) {
     mutationObserver.disconnect();
   }
-  
+
   mutationObserver = new MutationObserver((mutations) => {
     let hasSignificantChange = false;
-    
+
     // Only check for significant changes that might affect media detection
     for (const mutation of mutations) {
       if (mutation.type === "childList") {
-        const hasMediaChanges = [...mutation.addedNodes, ...mutation.removedNodes].some(
-          (node) => {
-            if (!(node instanceof Element)) return false;
-            return node.tagName === "IMG" || 
-                   node.tagName === "VIDEO" || 
-                   (node.querySelector && (node.querySelector("img") || node.querySelector("video")));
-          }
-        );
+        const hasMediaChanges = [
+          ...mutation.addedNodes,
+          ...mutation.removedNodes,
+        ].some((node) => {
+          if (!(node instanceof Element)) return false;
+          return (
+            node.tagName === "IMG" ||
+            node.tagName === "VIDEO" ||
+            (node.querySelector &&
+              (node.querySelector("img") || node.querySelector("video")))
+          );
+        });
         if (hasMediaChanges) {
           hasSignificantChange = true;
           break;
@@ -169,7 +182,7 @@ const setupMutationObserver = () => {
     if (hasSignificantChange) {
       // Clear cache since content changed
       cachedMediaOnlyResult = null;
-      
+
       // Use medium debounce for mutation changes
       mediumMediaCheck(() => {
         applyGrayscaleEffect();
@@ -224,21 +237,26 @@ export default defineContentScript({
           temporaryDisableUntil: newSettings.temporaryDisableUntil,
           imageExceptionEnabled: newSettings.mediaExceptionEnabled,
         };
-        
+
         // Apply changes immediately for settings updates
         applyGrayscaleEffect();
       }
     });
 
     // Initial application
-    if (currentSettings.enabled && !currentSettings.temporaryDisable && 
-        !currentSettings.blacklist.includes(currentSite)) {
+    if (
+      currentSettings.enabled &&
+      !currentSettings.temporaryDisable &&
+      !currentSettings.blacklist.includes(currentSite)
+    ) {
       applyGrayscaleEffect();
     }
 
     browser.runtime.onMessage.addListener((message) => {
       if (message.type === "temporaryDisableSet") {
-        console.log(`Monochromate temporarily disabled for ${message.duration} minutes`);
+        console.log(
+          `Monochromate temporarily disabled for ${message.duration} minutes`
+        );
       }
     });
 
@@ -251,7 +269,7 @@ export default defineContentScript({
       cachedMediaOnlyResult = null;
       clearMediaCheckCache();
     };
-    
+
     window.addEventListener("beforeunload", handleNavigation);
     window.addEventListener("popstate", handleNavigation);
 
@@ -259,7 +277,7 @@ export default defineContentScript({
       ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
         document.removeEventListener(event, handleFullscreenChange);
       });
-      
+
       window.removeEventListener("load", initializeGrayscale);
       window.removeEventListener("beforeunload", handleNavigation);
       window.removeEventListener("popstate", handleNavigation);
@@ -273,7 +291,10 @@ export default defineContentScript({
         overlayElement = null;
       }
       document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
-        if (element instanceof HTMLElement && element.style.filter.includes("grayscale")) {
+        if (
+          element instanceof HTMLElement &&
+          element.style.filter.includes("grayscale")
+        ) {
           removeFullscreenGreyscale(element);
         }
       });

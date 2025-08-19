@@ -9,10 +9,10 @@ interface ToggleCardProps {
   isTemporaryDisabled?: boolean;
 }
 
-const ToggleCard: React.FC<ToggleCardProps> = ({ 
-  enabled, 
-  onToggle, 
-  isTemporaryDisabled = false 
+const ToggleCard: React.FC<ToggleCardProps> = ({
+  enabled,
+  onToggle,
+  isTemporaryDisabled = false,
 }) => {
   const [shortcut, setShortcut] = useState<string>("");
 
@@ -21,7 +21,11 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
   }, []);
 
   const isDisabled = isTemporaryDisabled;
-  const buttonText = isTemporaryDisabled ? "Disabled" : (enabled ? "Active" : "Inactive");
+  const buttonText = isTemporaryDisabled
+    ? "Disabled"
+    : enabled
+    ? "Active"
+    : "Inactive";
 
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
@@ -49,7 +53,11 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
             }`}
             onClick={isDisabled ? undefined : onToggle}
             disabled={isDisabled}
-            title={isTemporaryDisabled ? "Cannot toggle while temporarily disabled" : undefined}
+            title={
+              isTemporaryDisabled
+                ? "Cannot toggle while temporarily disabled"
+                : undefined
+            }
           >
             {buttonText}
           </button>
