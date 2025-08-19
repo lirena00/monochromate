@@ -1,7 +1,23 @@
+import { isMediaOnlyPage } from "@/utils/MediaCheckUtil";
 import { settings } from "@/utils/storage";
 
 export default defineBackground(() => {
   let settingsInitialized = false;
+
+  const updateBadge = (
+    enabled: boolean,
+    temporaryDisabled: boolean = false
+  ) => {
+    if (temporaryDisabled) {
+      browser.action.setBadgeText({ text: "❚❚" });
+      browser.action.setBadgeBackgroundColor({ color: "#f5f5f5" });
+    } else if (enabled) {
+      browser.action.setBadgeText({ text: "ON" });
+      browser.action.setBadgeBackgroundColor({ color: "#f5f5f5" });
+    } else {
+      browser.action.setBadgeText({ text: "" });
+    }
+  };
 
   // Debounce helper to prevent too frequent tab updates
   const debounce = (func: Function, wait: number) => {
@@ -11,8 +27,6 @@ export default defineBackground(() => {
       timeout = setTimeout(() => func(...args), wait) as unknown as number;
     };
   };
-
-  // Optimized version with hostname extraction helper
 
   const getHostname = (url: string): string => {
     try {
@@ -28,12 +42,28 @@ export default defineBackground(() => {
     );
   };
 
-  // Debounced version of applyGreyscale to prevent rapid repeated calls
+  // Function to determine if grayscale should be applied
+  const shouldApplyGrayscale = (
+    domain: string,
+    isMediaOnly: boolean,
+    settings: any
+  ): boolean => {
+    return (
+      settings.enabled &&
+      domain &&
+      !settings.blacklist.includes(domain) &&
+      !(isMediaOnly && settings.imageExceptionEnabled)
+    );
+  };
+
+  // Debounced version of applyGreyscale
   const applyGreyscaleToAllTabsDebounced = debounce(
-    (intensity: number = 100, blacklist: string[] = []) => {
-      // Get all tabs once instead of multiple individual queries
+    (
+      intensity: number = 100,
+      blacklist: string[] = [],
+      imageExceptionEnabled: boolean = false
+    ) => {
       browser.tabs.query({}).then((tabs) => {
-        // Process URLs outside the loop for efficiency
         const tabsToUpdate = tabs.filter((tab) => {
           if (!tab.id || !tab.url) return false;
           const domain = getHostname(tab.url);
@@ -44,46 +74,116 @@ export default defineBackground(() => {
         if (tabsToUpdate.length > 0) {
           for (const tab of tabsToUpdate) {
             if (tab.id) {
+              const domain = getHostname(tab.url || "");
+
+              // Check if it's a media-only page
               browser.scripting
                 .executeScript({
                   target: { tabId: tab.id },
-                  func: (intensity: number) => {
-                    const fullscreenElement = getFullscreenElement();
+                  func: isMediaOnlyPage,
+                })
+                .then((results) => {
+                  const isMediaOnly = results?.[0]?.result || false;
 
-                    if (
-                      fullscreenElement &&
-                      fullscreenElement instanceof HTMLElement
-                    ) {
-                      fullscreenElement.style.filter = `grayscale(${intensity}%)`;
-                      fullscreenElement.style.transition = "filter 0.2s ease";
-                    } else {
-                      let overlay = document.getElementById(
-                        "monochromate-overlay"
-                      );
-                      if (!overlay) {
-                        overlay = document.createElement("div");
-                        overlay.id = "monochromate-overlay";
-                        overlay.style.cssText = `
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100vw;
-                        height: 100vh;
-                        pointer-events: none;
-                        z-index: 100000;
-                        backdrop-filter: grayscale(${intensity}%);
-                      `;
-                        document.documentElement.appendChild(overlay);
-                      } else {
-                        overlay.style.backdropFilter = `grayscale(${intensity}%)`;
-                      }
-                    }
-                  },
-                  args: [intensity],
+                  if (
+                    !shouldApplyGrayscale(domain, isMediaOnly, {
+                      enabled: true,
+                      blacklist,
+                      imageExceptionEnabled,
+                    })
+                  ) {
+                    return;
+                  }
+
+                  // Apply greyscale
+                  browser.scripting
+                    .executeScript({
+                      target: { tabId: tab.id! },
+                      func: (intensity: number) => {
+                        const fullscreenElement = getFullscreenElement();
+
+                        if (
+                          fullscreenElement &&
+                          fullscreenElement instanceof HTMLElement
+                        ) {
+                          fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                          fullscreenElement.style.transition =
+                            "filter 0.2s ease";
+                        } else {
+                          let overlay = document.getElementById(
+                            "monochromate-overlay"
+                          );
+                          if (!overlay) {
+                            overlay = document.createElement("div");
+                            overlay.id = "monochromate-overlay";
+                            overlay.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100vw;
+                            height: 100vh;
+                            pointer-events: none;
+                            z-index: 2147483647;
+                            backdrop-filter: grayscale(${intensity}%);
+                          `;
+                            document.documentElement.appendChild(overlay);
+                          } else {
+                            overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                          }
+                        }
+                      },
+                      args: [intensity],
+                    })
+                    .catch(() => {
+                      // Silently fail for tabs that can't be modified
+                    });
                 })
                 .catch(() => {
-                  // Silently fail for tabs that can't be modified
-                  // (e.g., chrome:// URLs, extension pages, etc.)
+                  // If image detection fails, apply greyscale normally
+                  const domain = getHostname(tab.url || "");
+                  if (!blacklist.includes(domain)) {
+                    browser.scripting
+                      .executeScript({
+                        target: { tabId: tab.id! },
+                        func: (intensity: number) => {
+                          const fullscreenElement = getFullscreenElement();
+
+                          if (
+                            fullscreenElement &&
+                            fullscreenElement instanceof HTMLElement
+                          ) {
+                            fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                            fullscreenElement.style.transition =
+                              "filter 0.2s ease";
+                          } else {
+                            let overlay = document.getElementById(
+                              "monochromate-overlay"
+                            );
+                            if (!overlay) {
+                              overlay = document.createElement("div");
+                              overlay.id = "monochromate-overlay";
+                              overlay.style.cssText = `
+                              position: fixed;
+                              top: 0;
+                              left: 0;
+                              width: 100vw;
+                              height: 100vh;
+                              pointer-events: none;
+                              z-index: 2147483647;
+                              backdrop-filter: grayscale(${intensity}%);
+                            `;
+                              document.documentElement.appendChild(overlay);
+                            } else {
+                              overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                            }
+                          }
+                        },
+                        args: [intensity],
+                      })
+                      .catch(() => {
+                        // Silently fail
+                      });
+                  }
                 });
             }
           }
@@ -128,13 +228,105 @@ export default defineBackground(() => {
     });
   };
 
-  const initializeSettings = async () => {
+  // NEW: Simplified temporary disable using alarms
+  const setTemporaryDisable = async (minutes: number) => {
+    try {
+      const until = Date.now() + minutes * 60 * 1000;
+
+      // Update settings
+      await settings.setValue({
+        ...(await settings.getValue()),
+        temporaryDisable: true,
+        temporaryDisableUntil: until,
+      });
+
+      // Clear any existing temporary disable alarm
+      await browser.alarms.clear("EndTemporaryDisable");
+
+      // Create alarm to auto-cancel
+      await browser.alarms.create("EndTemporaryDisable", {
+        when: until,
+      });
+
+      disableGreyscaleForAllTabs();
+      updateBadge(false, true);
+    } catch (error) {
+      console.error("Failed to set temporary disable:", error);
+    }
+  };
+
+  const cancelTemporaryDisable = async () => {
     try {
       const currentSettings = await settings.getValue();
+
+      // Clear alarm
+      await browser.alarms.clear("EndTemporaryDisable");
+
+      // Update settings
+      await settings.setValue({
+        ...currentSettings,
+        temporaryDisable: false,
+        temporaryDisableUntil: null,
+      });
+
       if (currentSettings.enabled) {
         applyGreyscaleToAllTabsDebounced(
           currentSettings.intensity,
-          currentSettings.blacklist
+          currentSettings.blacklist,
+          currentSettings.mediaExceptionEnabled
+        );
+      }
+      updateBadge(currentSettings.enabled, false);
+    } catch (error) {
+      console.error("Failed to cancel temporary disable:", error);
+    }
+  };
+
+  // Check if temporary disable has expired on startup
+  const checkTemporaryDisableExpiry = async () => {
+    try {
+      const currentSettings = await settings.getValue();
+      if (
+        currentSettings.temporaryDisable &&
+        currentSettings.temporaryDisableUntil
+      ) {
+        const remaining = currentSettings.temporaryDisableUntil - Date.now();
+        if (remaining <= 0) {
+          // Expired - clear it immediately
+          await settings.setValue({
+            ...currentSettings,
+            temporaryDisable: false,
+            temporaryDisableUntil: null,
+          });
+          console.log("Cleared expired temporary disable on startup");
+        } else {
+          // Still valid - recreate alarm for remaining time
+          await browser.alarms.create("EndTemporaryDisable", {
+            when: currentSettings.temporaryDisableUntil,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check temporary disable expiry:", error);
+    }
+  };
+
+  const initializeSettings = async () => {
+    try {
+      await checkTemporaryDisableExpiry();
+      const currentSettings = await settings.getValue();
+      updateBadge(
+        currentSettings.enabled && !currentSettings.temporaryDisable,
+        currentSettings.temporaryDisable
+      );
+
+      if (currentSettings.enabled && !currentSettings.temporaryDisable) {
+        updateBadge(currentSettings.enabled);
+
+        applyGreyscaleToAllTabsDebounced(
+          currentSettings.intensity,
+          currentSettings.blacklist,
+          currentSettings.mediaExceptionEnabled
         );
       }
       settingsInitialized = true;
@@ -148,10 +340,16 @@ export default defineBackground(() => {
     if (!settingsInitialized) return;
 
     if (newSettings?.enabled !== oldSettings?.enabled) {
+      updateBadge(
+        newSettings?.enabled && !newSettings?.temporaryDisable,
+        newSettings?.temporaryDisable
+      );
+
       if (newSettings?.enabled) {
         applyGreyscaleToAllTabsDebounced(
           newSettings.intensity,
-          newSettings.blacklist
+          newSettings.blacklist,
+          newSettings.mediaExceptionEnabled
         );
       } else {
         disableGreyscaleForAllTabs();
@@ -164,7 +362,8 @@ export default defineBackground(() => {
     ) {
       applyGreyscaleToAllTabsDebounced(
         newSettings.intensity,
-        newSettings.blacklist
+        newSettings.blacklist,
+        newSettings.mediaExceptionEnabled
       );
     }
 
@@ -175,7 +374,27 @@ export default defineBackground(() => {
     ) {
       applyGreyscaleToAllTabsDebounced(
         newSettings.intensity,
-        newSettings.blacklist
+        newSettings.blacklist,
+        newSettings.mediaExceptionEnabled
+      );
+    }
+
+    if (
+      newSettings?.mediaExceptionEnabled !==
+        oldSettings?.mediaExceptionEnabled &&
+      newSettings?.enabled
+    ) {
+      applyGreyscaleToAllTabsDebounced(
+        newSettings.intensity,
+        newSettings.blacklist,
+        newSettings.mediaExceptionEnabled
+      );
+    }
+
+    if (newSettings?.temporaryDisable !== oldSettings?.temporaryDisable) {
+      updateBadge(
+        newSettings?.enabled && !newSettings?.temporaryDisable,
+        newSettings?.temporaryDisable
       );
     }
 
@@ -230,15 +449,27 @@ export default defineBackground(() => {
 
   browser.alarms.onAlarm.addListener(async (alarm) => {
     const currentSettings = await settings.getValue();
+
+    if (alarm.name === "EndTemporaryDisable") {
+      // Temporary disable expired
+      await cancelTemporaryDisable();
+      console.log("Temporary disable auto-expired via alarm");
+      return;
+    }
+
     if (
       alarm.name === "StartMonochromate" &&
       currentSettings.schedule &&
       settingsInitialized
     ) {
-      await settings.setValue({
-        ...currentSettings,
-        enabled: true,
-      });
+      // Don't override temporary disable
+      if (!currentSettings.temporaryDisable) {
+        await settings.setValue({
+          ...currentSettings,
+          enabled: true,
+        });
+        updateBadge(true, false);
+      }
     } else if (
       alarm.name === "EndMonochromate" &&
       currentSettings.schedule &&
@@ -248,6 +479,7 @@ export default defineBackground(() => {
         ...currentSettings,
         enabled: false,
       });
+      updateBadge(false, currentSettings.temporaryDisable);
     }
   });
 
@@ -255,10 +487,16 @@ export default defineBackground(() => {
     const currentSettings = await settings.getValue();
     switch (message.type) {
       case "toggleGreyscale":
+        // Clear temporary disable when manually toggling
+        await browser.alarms.clear("EndTemporaryDisable");
+        const newEnabled = !currentSettings.enabled;
         await settings.setValue({
           ...currentSettings,
-          enabled: !currentSettings.enabled,
+          enabled: newEnabled,
+          temporaryDisable: false,
+          temporaryDisableUntil: null,
         });
+        updateBadge(newEnabled, false);
         break;
       case "setIntensity":
         await settings.setValue({
@@ -270,6 +508,12 @@ export default defineBackground(() => {
         await settings.setValue({
           ...currentSettings,
           blacklist: message.value,
+        });
+        break;
+      case "toggleMediaException":
+        await settings.setValue({
+          ...currentSettings,
+          mediaExceptionEnabled: message.value,
         });
         break;
       case "saveSchedule":
@@ -287,6 +531,79 @@ export default defineBackground(() => {
         });
         updateScheduleAlarm();
         break;
+      case "temporaryDisable":
+        await setTemporaryDisable(message.minutes);
+        break;
+
+      case "cancelTemporaryDisable":
+        await cancelTemporaryDisable();
+        break;
+    }
+  });
+
+  browser.commands.onCommand.addListener(async (command) => {
+    const currentSettings = await settings.getValue();
+
+    switch (command) {
+      case "toggle_greyscale":
+        const newEnabled = !currentSettings.enabled;
+        await settings.setValue({
+          ...currentSettings,
+          enabled: newEnabled,
+        });
+        updateBadge(
+          newEnabled && !currentSettings.temporaryDisable,
+          currentSettings.temporaryDisable
+        );
+        break;
+
+      case "quick_toggle_blacklist":
+        browser.tabs
+          .query({ active: true, currentWindow: true })
+          .then((tabs) => {
+            const currentTab = tabs[0];
+            if (currentTab?.url) {
+              const domain = getHostname(currentTab.url);
+              if (domain) {
+                const isCurrentUrlBlacklisted =
+                  currentSettings.blacklist.includes(domain);
+
+                if (isCurrentUrlBlacklisted) {
+                  const updatedBlacklist = currentSettings.blacklist.filter(
+                    (site) => site !== domain
+                  );
+                  settings.setValue({
+                    ...currentSettings,
+                    blacklist: updatedBlacklist,
+                  });
+                } else {
+                  settings.setValue({
+                    ...currentSettings,
+                    blacklist: [...currentSettings.blacklist, domain],
+                  });
+                }
+              }
+            }
+          });
+        break;
+
+      case "increase_intensity":
+        if (!currentSettings.enabled) break;
+        const newIntensityUp = Math.min(100, currentSettings.intensity + 10);
+        await settings.setValue({
+          ...currentSettings,
+          intensity: newIntensityUp,
+        });
+        break;
+
+      case "decrease_intensity":
+        if (!currentSettings.enabled) break;
+        const newIntensityDown = Math.max(0, currentSettings.intensity - 10);
+        await settings.setValue({
+          ...currentSettings,
+          intensity: newIntensityDown,
+        });
+        break;
     }
   });
 
@@ -298,45 +615,61 @@ export default defineBackground(() => {
         if (tab.url) {
           const domain = getHostname(tab.url);
           if (domain && !currentSettings.blacklist.includes(domain)) {
+            // Check if it's a media-only page first
             browser.scripting
               .executeScript({
                 target: { tabId },
-                func: (intensity: number) => {
-                  const fullscreenElement = getFullscreenElement();
-
-                  if (
-                    fullscreenElement &&
-                    fullscreenElement instanceof HTMLElement
-                  ) {
-                    fullscreenElement.style.filter = `grayscale(${intensity}%)`;
-                    fullscreenElement.style.transition = "filter 0.2s ease";
-                  } else {
-                    let overlay = document.getElementById(
-                      "monochromate-overlay"
-                    );
-                    if (!overlay) {
-                      overlay = document.createElement("div");
-                      overlay.id = "monochromate-overlay";
-                      overlay.style.cssText = `
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100vw;
-                        height: 100vh;
-                        pointer-events: none;
-                        z-index: 100000;
-                        backdrop-filter: grayscale(${intensity}%);
-                      `;
-                      document.documentElement.appendChild(overlay);
-                    } else {
-                      overlay.style.backdropFilter = `grayscale(${intensity}%)`;
-                    }
-                  }
-                },
-                args: [currentSettings.intensity],
+                func: isMediaOnlyPage,
               })
-              .catch(() => {
-                // Ignore errors for restricted pages
+              .then((results) => {
+                const isMediaOnly = results?.[0]?.result || false;
+
+                // Skip applying greyscale if it's a media-only page and exception is enabled
+                if (isMediaOnly && currentSettings.mediaExceptionEnabled) {
+                  return;
+                }
+
+                // Apply greyscale normally
+                browser.scripting
+                  .executeScript({
+                    target: { tabId },
+                    func: (intensity: number) => {
+                      const fullscreenElement = getFullscreenElement();
+
+                      if (
+                        fullscreenElement &&
+                        fullscreenElement instanceof HTMLElement
+                      ) {
+                        fullscreenElement.style.filter = `grayscale(${intensity}%)`;
+                        fullscreenElement.style.transition = "filter 0.2s ease";
+                      } else {
+                        let overlay = document.getElementById(
+                          "monochromate-overlay"
+                        );
+                        if (!overlay) {
+                          overlay = document.createElement("div");
+                          overlay.id = "monochromate-overlay";
+                          overlay.style.cssText = `
+                            position: fixed;
+                            top: 0;
+                            left: 0;
+                            width: 100vw;
+                            height: 100vh;
+                            pointer-events: none;
+                            z-index: 2147483647;
+                            backdrop-filter: grayscale(${intensity}%);
+                          `;
+                          document.documentElement.appendChild(overlay);
+                        } else {
+                          overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                        }
+                      }
+                    },
+                    args: [currentSettings.intensity],
+                  })
+                  .catch(() => {
+                    // Ignore errors for restricted pages
+                  });
               });
           }
         }

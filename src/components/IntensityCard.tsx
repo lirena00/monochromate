@@ -1,5 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Sliders } from "lucide-react";
+import { getShortcutByName } from "@/utils/shortcuts";
+import ShortcutBadge from "@/components/ShortcutBadge";
 
 interface IntensityCardProps {
   intensity: number;
@@ -12,27 +14,47 @@ const IntensityCard: React.FC<IntensityCardProps> = ({
   enabled,
   onIntensityChange,
 }) => {
+  const [increaseShortcut, setIncreaseShortcut] = useState<string>("");
+  const [decreaseShortcut, setDecreaseShortcut] = useState<string>("");
+
+  useEffect(() => {
+    getShortcutByName("increase_intensity").then(setIncreaseShortcut);
+    getShortcutByName("decrease_intensity").then(setDecreaseShortcut);
+  }, []);
+
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
       <div className="flex items-center gap-3 mb-3">
         <div className="text-neutral-700">
           <Sliders size={20} />
         </div>
-        <div>
+        <div className="flex-1">
           <h2 className="font-semibold text-neutral-800">Filter Intensity</h2>
           <p className="text-sm text-neutral-500 italic">Adjust the strength</p>
         </div>
       </div>
-      <input
-        type="range"
-        min="0"
-        max="100"
-        value={intensity}
-        onChange={onIntensityChange}
-        disabled={!enabled}
-        className="w-full accent-neutral-900"
-      />
-      <div className="text-right text-sm text-neutral-500">{intensity}%</div>
+
+      <div className="relative">
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={intensity}
+          onChange={onIntensityChange}
+          disabled={!enabled}
+          className="w-full accent-neutral-900"
+        />
+
+        <div className="flex justify-between items-center mt-2">
+          {decreaseShortcut && (
+            <ShortcutBadge size="xs" shortcut={decreaseShortcut} />
+          )}
+          <div className="text-sm text-neutral-600 ">{intensity}%</div>
+          {increaseShortcut && (
+            <ShortcutBadge size="xs" shortcut={increaseShortcut} />
+          )}
+        </div>
+      </div>
     </div>
   );
 };

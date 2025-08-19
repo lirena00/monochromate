@@ -1,6 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { ArrowLeft, Search, AlertCircle, X, Shield } from "lucide-react";
 import Footer from "./Footer";
+import { getShortcutByName } from "@/utils/shortcuts";
+import ShortcutBadge from "@/components/ShortcutBadge";
 
 interface BlacklistManagementProps {
   searchTerm: string;
@@ -11,6 +13,8 @@ interface BlacklistManagementProps {
   onReturnToMain: () => void;
   onAddCurrentSite: () => void;
   onRemoveSite: (site: string) => void;
+  mediaExceptionEnabled: boolean;
+  onToggleMediaException: () => void;
 }
 
 const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
@@ -22,9 +26,17 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
   onReturnToMain,
   onAddCurrentSite,
   onRemoveSite,
+  mediaExceptionEnabled,
+  onToggleMediaException,
 }) => {
+  const [shortcut, setShortcut] = useState<string>("");
+
+  useEffect(() => {
+    getShortcutByName("quick_toggle_blacklist").then(setShortcut);
+  }, []);
+
   return (
-    <div className="flex flex-col h-[700px] overflow-hidden">
+    <div className="flex flex-col h-[800px] overflow-hidden">
       <div className="flex items-center gap-3 mb-6">
         <button
           onClick={onReturnToMain}
@@ -44,44 +56,67 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
             <Shield size={20} />
           </div>
           <div>
-            <h2 className="font-semibold text-neutral-800">Current Site</h2>
+            <h2 className="font-semibold text-neutral-800">
+              Current Site & Media
+            </h2>
             <p className="text-sm text-neutral-500 italic">
-              Manage current website
+              Manage site exclusion settings
             </p>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-neutral-200 p-3 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-neutral-200 rounded-full overflow-hidden">
-              {currentUrl && (
-                <img
-                  src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=64`}
-                  alt=""
-                  className="w-full h-full object-cover"
-                />
+        <div className="bg-white rounded-lg border border-neutral-200 p-3">
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 bg-neutral-200 rounded-full overflow-hidden">
+                {currentUrl && (
+                  <img
+                    src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=64`}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
+              <span className="text-sm font-medium truncate max-w-[140px]">
+                {currentUrl}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <ShortcutBadge shortcut={shortcut} />
+              {isCurrentUrlBlacklisted ? (
+                <button
+                  onClick={() => onRemoveSite(currentUrl)}
+                  className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded-sm hover:bg-neutral-300 transition-colors"
+                >
+                  Remove
+                </button>
+              ) : (
+                <button
+                  onClick={onAddCurrentSite}
+                  className="text-xs px-2 py-1 bg-neutral-900 text-white rounded-sm hover:bg-neutral-800 transition-colors"
+                >
+                  Exclude
+                </button>
               )}
             </div>
-            <span className="text-sm font-medium truncate max-w-[200px]">
-              {currentUrl}
-            </span>
           </div>
 
-          {isCurrentUrlBlacklisted ? (
-            <button
-              onClick={() => onRemoveSite(currentUrl)}
-              className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded-sm hover:bg-neutral-300 transition-colors"
-            >
-              Remove
-            </button>
-          ) : (
-            <button
-              onClick={onAddCurrentSite}
-              className="text-xs px-2 py-1 bg-neutral-900 text-white rounded-sm hover:bg-neutral-800 transition-colors"
-            >
-              Exclude
-            </button>
-          )}
+          {/* Media Exception */}
+          <div className="flex items-center justify-between pt-3 border-t border-neutral-200">
+            <span className="text-sm text-neutral-600">
+              Exclude media-only pages
+            </span>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={mediaExceptionEnabled}
+                onChange={onToggleMediaException}
+              />
+              <div className="w-9 h-5 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-neutral-900"></div>
+            </label>
+          </div>
         </div>
       </div>
 

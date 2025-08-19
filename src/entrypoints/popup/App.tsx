@@ -9,6 +9,7 @@ import IntensityCard from "@/components/IntensityCard";
 import WarningCard from "@/components/WarningCard";
 import Footer from "@/components/Footer";
 import BlacklistManagement from "@/components/BlacklistManagement";
+import TemporaryDisableCard from "@/components/TemporaryDisableCard";
 import { Loader2 } from "lucide-react";
 
 const useDebounce = (value: string, delay: number) => {
@@ -32,6 +33,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
+  const [mediaExceptionEnabled, setMediaExceptionEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
   const [startMonochromate, setStartMonochromate] = useState("");
@@ -39,6 +41,7 @@ export default function App() {
   const [tempStartTime, setTempStartTime] = useState("");
   const [tempEndTime, setTempEndTime] = useState("");
   const [scheduleToggle, setScheduleToggle] = useState(false);
+  const [isTemporaryDisabled, setIsTemporaryDisabled] = useState(false);
   const [view, setView] = useState<"main" | "blacklist">("main");
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -70,6 +73,9 @@ export default function App() {
         setEnabled(currentSettings.enabled);
         setIntensity(currentSettings.intensity);
         setBlacklist(currentSettings.blacklist);
+        setMediaExceptionEnabled(
+          currentSettings.mediaExceptionEnabled ?? false
+        );
         setStartMonochromate(currentSettings.scheduleStart);
         setEndMonochromate(currentSettings.scheduleEnd);
         setTempStartTime(currentSettings.scheduleStart);
@@ -89,6 +95,7 @@ export default function App() {
         setEnabled(newSettings.enabled);
         setIntensity(newSettings.intensity);
         setBlacklist(newSettings.blacklist);
+        setMediaExceptionEnabled(newSettings.mediaExceptionEnabled ?? false);
         setStartMonochromate(newSettings.scheduleStart);
         setEndMonochromate(newSettings.scheduleEnd);
         setTempStartTime(newSettings.scheduleStart);
@@ -118,6 +125,16 @@ export default function App() {
     setEnabled(newEnabled);
     browser.runtime.sendMessage({ type: "toggleGreyscale", intensity });
   }, [enabled, intensity, loading]);
+
+  const toggleMediaException = useCallback(() => {
+    if (loading) return;
+    const newMediaExceptionEnabled = !mediaExceptionEnabled;
+    setMediaExceptionEnabled(newMediaExceptionEnabled);
+    browser.runtime.sendMessage({
+      type: "toggleMediaException",
+      value: newMediaExceptionEnabled,
+    });
+  }, [mediaExceptionEnabled, loading]);
 
   const changeIntensity = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -190,8 +207,16 @@ export default function App() {
           <Header />
           <div className="grid grid-cols-1 gap-4 flex-1">
             <WarningCard currentUrl={currentUrl} />
-            <GreyscaleToggleCard enabled={enabled} onToggle={toggleGreyscale} />
 
+            <GreyscaleToggleCard
+              enabled={enabled}
+              onToggle={toggleGreyscale}
+              isTemporaryDisabled={isTemporaryDisabled}
+            />
+            <TemporaryDisableCard
+              enabled={enabled}
+              onTemporaryStateChange={setIsTemporaryDisabled}
+            />
             <ExcludedSitesCard
               currentUrl={currentUrl}
               blacklist={blacklist}
@@ -234,6 +259,8 @@ export default function App() {
           onReturnToMain={handleReturnToMain}
           onAddCurrentSite={addCurrentSite}
           onRemoveSite={removeSite}
+          mediaExceptionEnabled={mediaExceptionEnabled}
+          onToggleMediaException={toggleMediaException}
         />
       )}
     </div>
