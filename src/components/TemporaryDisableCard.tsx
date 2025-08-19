@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Clock, X, Info, ChevronDown, Check } from "lucide-react";
-import { settings } from "@/utils/storage"; // ADD THIS IMPORT
+import { settings } from "@/utils/storage";
 
 interface TemporaryDisableCardProps {
   enabled: boolean;
@@ -35,30 +35,6 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
     { value: "hours", label: "Hours" },
   ];
 
-  // Firefox-specific: Force refresh storage state
-  const refreshStorageState = async () => {
-    try {
-      const currentSettings = await settings.getValue();
-      const tempDisable = currentSettings.temporaryDisable || false;
-      const tempUntil = currentSettings.temporaryDisableUntil || null;
-
-      setIsTemporaryDisabled(tempDisable);
-      setDisableUntil(tempUntil);
-      onTemporaryStateChange?.(tempDisable);
-
-      if (tempDisable && tempUntil) {
-        const remaining = tempUntil - Date.now();
-        setRemainingTime(Math.max(0, remaining));
-        setDisplayTime(formatTime(remaining));
-      } else {
-        setRemainingTime(0);
-        setDisplayTime("");
-      }
-    } catch (error) {
-      console.error("Failed to refresh storage state:", error);
-    }
-  };
-
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -74,11 +50,34 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Load initial state and watch for changes
   useEffect(() => {
-    // Initial state load
-    refreshStorageState();
+    const loadState = async () => {
+      try {
+        const currentSettings = await settings.getValue();
+        const tempDisable = currentSettings.temporaryDisable || false;
+        const tempUntil = currentSettings.temporaryDisableUntil || null;
 
-    // Watch for storage changes with Firefox-compatible polling
+        setIsTemporaryDisabled(tempDisable);
+        setDisableUntil(tempUntil);
+        onTemporaryStateChange?.(tempDisable);
+
+        if (tempDisable && tempUntil) {
+          const remaining = tempUntil - Date.now();
+          setRemainingTime(Math.max(0, remaining));
+          setDisplayTime(formatTime(remaining));
+        } else {
+          setRemainingTime(0);
+          setDisplayTime("");
+        }
+      } catch (error) {
+        console.error("Failed to load temporary disable state:", error);
+      }
+    };
+
+    loadState();
+
+    // Watch for storage changes
     const unwatchSettings = settings.watch((newSettings) => {
       if (newSettings) {
         const tempDisable = newSettings.temporaryDisable || false;
@@ -99,39 +98,26 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
       }
     });
 
-    // Firefox fallback: Periodic storage polling
-    const pollInterval = setInterval(refreshStorageState, 500);
-
     return () => {
       unwatchSettings();
-      clearInterval(pollInterval);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
     };
   }, [onTemporaryStateChange]);
 
-  // Separate countdown timer effect
+  // Simple countdown timer for UI display
   useEffect(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
 
     if (isTemporaryDisabled && disableUntil) {
-      intervalRef.current = setInterval(async () => {
+      intervalRef.current = setInterval(() => {
         const remaining = disableUntil - Date.now();
         if (remaining <= 0) {
-          // Time expired - force cancel and refresh
-          try {
-            await browser.runtime.sendMessage({
-              type: "cancelTemporaryDisable",
-            });
-            setTimeout(refreshStorageState, 100);
-          } catch (error) {
-            console.error("Failed to auto-cancel expired timer:", error);
-            // Force refresh anyway
-            refreshStorageState();
-          }
+          setRemainingTime(0);
+          setDisplayTime("Re-enabling...");
         } else {
           setRemainingTime(remaining);
           setDisplayTime(formatTime(remaining));
@@ -148,50 +134,23 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
 
   const handleTemporaryDisable = async (minutes: number) => {
     try {
-      // Immediate UI feedback
-      const until = Date.now() + minutes * 60 * 1000;
-      setIsTemporaryDisabled(true);
-      setDisableUntil(until);
-      setRemainingTime(minutes * 60 * 1000);
-      setDisplayTime(formatTime(minutes * 60 * 1000));
       setCustomValue("");
-      onTemporaryStateChange?.(true);
-
-      // Send to background
       await browser.runtime.sendMessage({
         type: "temporaryDisable",
         minutes,
       });
-
-      // Firefox: Double-check state after delay
-      setTimeout(refreshStorageState, 200);
     } catch (error) {
       console.error("Failed to set temporary disable:", error);
-      // Revert UI on error
-      refreshStorageState();
     }
   };
 
   const cancelTemporaryDisable = async () => {
     try {
-      // Immediate UI feedback
-      setIsTemporaryDisabled(false);
-      setDisableUntil(null);
-      setRemainingTime(0);
-      setDisplayTime("");
-      onTemporaryStateChange?.(false);
-
-      // Send to background
       await browser.runtime.sendMessage({
         type: "cancelTemporaryDisable",
       });
-
-      // Firefox: Double-check state after delay
-      setTimeout(refreshStorageState, 200);
     } catch (error) {
       console.error("Failed to cancel temporary disable:", error);
-      // Revert to actual state on error
-      refreshStorageState();
     }
   };
 

@@ -1,15 +1,6 @@
 import { isMediaOnlyPage } from "@/utils/MediaCheckUtil";
 import { settings } from "@/utils/storage";
 
-let temporaryDisableTimer: NodeJS.Timeout | null = null;
-
-const cleanupTemporaryDisable = () => {
-  if (temporaryDisableTimer) {
-    clearTimeout(temporaryDisableTimer);
-    temporaryDisableTimer = null;
-  }
-};
-
 export default defineBackground(() => {
   let settingsInitialized = false;
 
@@ -237,36 +228,57 @@ export default defineBackground(() => {
     });
   };
 
+  // NEW: Simplified temporary disable using alarms
   const setTemporaryDisable = async (minutes: number) => {
     try {
-      cleanupTemporaryDisable();
-
       const until = Date.now() + minutes * 60 * 1000;
+
+      // Update settings
       await settings.setValue({
         ...(await settings.getValue()),
         temporaryDisable: true,
         temporaryDisableUntil: until,
       });
 
-      // Set timer to auto-cancel when expired
-      temporaryDisableTimer = setTimeout(async () => {
-        try {
-          const currentSettings = await settings.getValue();
-          await settings.setValue({
-            ...currentSettings,
-            temporaryDisable: false,
-            temporaryDisableUntil: null,
-          });
-          console.log("Temporary disable auto-expired");
-        } catch (error) {
-          console.error("Failed to auto-cancel temporary disable:", error);
-        }
-      }, minutes * 60 * 1000);
+      // Clear any existing temporary disable alarm
+      await browser.alarms.clear("EndTemporaryDisable");
+
+      // Create alarm to auto-cancel
+      await browser.alarms.create("EndTemporaryDisable", {
+        when: until,
+      });
 
       disableGreyscaleForAllTabs();
       updateBadge(false, true);
     } catch (error) {
       console.error("Failed to set temporary disable:", error);
+    }
+  };
+
+  const cancelTemporaryDisable = async () => {
+    try {
+      const currentSettings = await settings.getValue();
+
+      // Clear alarm
+      await browser.alarms.clear("EndTemporaryDisable");
+
+      // Update settings
+      await settings.setValue({
+        ...currentSettings,
+        temporaryDisable: false,
+        temporaryDisableUntil: null,
+      });
+
+      if (currentSettings.enabled) {
+        applyGreyscaleToAllTabsDebounced(
+          currentSettings.intensity,
+          currentSettings.blacklist,
+          currentSettings.mediaExceptionEnabled
+        );
+      }
+      updateBadge(currentSettings.enabled, false);
+    } catch (error) {
+      console.error("Failed to cancel temporary disable:", error);
     }
   };
 
@@ -288,33 +300,16 @@ export default defineBackground(() => {
           });
           console.log("Cleared expired temporary disable on startup");
         } else {
-          // Still valid - set timer for remaining time
-          temporaryDisableTimer = setTimeout(async () => {
-            try {
-              const settings_current = await settings.getValue();
-              await settings.setValue({
-                ...settings_current,
-                temporaryDisable: false,
-                temporaryDisableUntil: null,
-              });
-              console.log("Temporary disable auto-expired after restart");
-            } catch (error) {
-              console.error(
-                "Failed to auto-cancel temporary disable after restart:",
-                error
-              );
-            }
-          }, remaining);
+          // Still valid - recreate alarm for remaining time
+          await browser.alarms.create("EndTemporaryDisable", {
+            when: currentSettings.temporaryDisableUntil,
+          });
         }
       }
     } catch (error) {
       console.error("Failed to check temporary disable expiry:", error);
     }
   };
-
-  browser.runtime.onSuspend.addListener(() => {
-    cleanupTemporaryDisable();
-  });
 
   const initializeSettings = async () => {
     try {
@@ -454,6 +449,14 @@ export default defineBackground(() => {
 
   browser.alarms.onAlarm.addListener(async (alarm) => {
     const currentSettings = await settings.getValue();
+
+    if (alarm.name === "EndTemporaryDisable") {
+      // Temporary disable expired
+      await cancelTemporaryDisable();
+      console.log("Temporary disable auto-expired via alarm");
+      return;
+    }
+
     if (
       alarm.name === "StartMonochromate" &&
       currentSettings.schedule &&
@@ -485,7 +488,7 @@ export default defineBackground(() => {
     switch (message.type) {
       case "toggleGreyscale":
         // Clear temporary disable when manually toggling
-        cleanupTemporaryDisable();
+        await browser.alarms.clear("EndTemporaryDisable");
         const newEnabled = !currentSettings.enabled;
         await settings.setValue({
           ...currentSettings,
@@ -533,40 +536,7 @@ export default defineBackground(() => {
         break;
 
       case "cancelTemporaryDisable":
-        try {
-          cleanupTemporaryDisable();
-          await settings.setValue({
-            ...currentSettings,
-            temporaryDisable: false,
-            temporaryDisableUntil: null,
-          });
-
-          if (currentSettings.enabled) {
-            applyGreyscaleToAllTabsDebounced(
-              currentSettings.intensity,
-              currentSettings.blacklist,
-              currentSettings.mediaExceptionEnabled
-            );
-          }
-          updateBadge(currentSettings.enabled, false);
-        } catch (error) {
-          console.error("Failed to cancel temporary disable:", error);
-        }
-        break;
-
-      case "getTemporaryDisableStatus":
-        // Send back current temporary disable status
-        browser.runtime.sendMessage({
-          type: "temporaryDisableStatus",
-          isActive: currentSettings.temporaryDisable,
-          until: currentSettings.temporaryDisableUntil,
-          remainingMinutes: currentSettings.temporaryDisableUntil
-            ? Math.ceil(
-                (currentSettings.temporaryDisableUntil - Date.now()) /
-                  (60 * 1000)
-              )
-            : 0,
-        });
+        await cancelTemporaryDisable();
         break;
     }
   });
