@@ -28,6 +28,7 @@ A sleek browser extension that turns your web browsing experience into grayscale
 - **Minimal Interface** - Clean, modern UI with intuitive controls
 - **Temporary Disable** - Disable extension for specific period of time then re-enable it automatically
 - **Media-only page exclusion** - Media only page can be excluded
+- **Shortcut keys** - Shortcut keys for several actions to access them swiftly
 
 ## 🛠️ **Development**
 
