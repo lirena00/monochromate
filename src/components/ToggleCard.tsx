@@ -21,7 +21,7 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
   }, []);
 
   const isDisabled = isTemporaryDisabled;
-  const buttonText = isTemporaryDisabled ? "Temp Off" : (enabled ? "Active" : "Inactive");
+  const buttonText = isTemporaryDisabled ? "Disabled" : (enabled ? "Active" : "Inactive");
 
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
