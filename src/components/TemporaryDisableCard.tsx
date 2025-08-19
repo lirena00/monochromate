@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Clock, X, Info, ChevronDown, Check } from "lucide-react";
+import { settings } from "@/utils/storage"; // ADD THIS IMPORT
 
 interface TemporaryDisableCardProps {
   enabled: boolean;
@@ -19,6 +20,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
   const [displayTime, setDisplayTime] = useState("");
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const predefinedDurations = [
     { label: "5m", value: 5 },
@@ -32,6 +34,30 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
     { value: "minutes", label: "Minutes" },
     { value: "hours", label: "Hours" },
   ];
+
+  // Firefox-specific: Force refresh storage state
+  const refreshStorageState = async () => {
+    try {
+      const currentSettings = await settings.getValue();
+      const tempDisable = currentSettings.temporaryDisable || false;
+      const tempUntil = currentSettings.temporaryDisableUntil || null;
+
+      setIsTemporaryDisabled(tempDisable);
+      setDisableUntil(tempUntil);
+      onTemporaryStateChange?.(tempDisable);
+
+      if (tempDisable && tempUntil) {
+        const remaining = tempUntil - Date.now();
+        setRemainingTime(Math.max(0, remaining));
+        setDisplayTime(formatTime(remaining));
+      } else {
+        setRemainingTime(0);
+        setDisplayTime("");
+      }
+    } catch (error) {
+      console.error("Failed to refresh storage state:", error);
+    }
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -49,58 +75,80 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
   }, []);
 
   useEffect(() => {
-    // Check current temporary disable status from storage
-    const checkStatus = async () => {
-      try {
-        const currentSettings = await settings.getValue();
-        const tempDisable = currentSettings.temporaryDisable || false;
-        const tempUntil = currentSettings.temporaryDisableUntil || null;
+    // Initial state load
+    refreshStorageState();
+
+    // Watch for storage changes with Firefox-compatible polling
+    const unwatchSettings = settings.watch((newSettings) => {
+      if (newSettings) {
+        const tempDisable = newSettings.temporaryDisable || false;
+        const tempUntil = newSettings.temporaryDisableUntil || null;
 
         setIsTemporaryDisabled(tempDisable);
         setDisableUntil(tempUntil);
-
-        // Notify parent component of temporary disable state
         onTemporaryStateChange?.(tempDisable);
 
         if (tempDisable && tempUntil) {
           const remaining = tempUntil - Date.now();
           setRemainingTime(Math.max(0, remaining));
           setDisplayTime(formatTime(remaining));
-        }
-      } catch (error) {
-        console.error("Failed to check temporary disable status:", error);
-      }
-    };
-
-    checkStatus();
-
-    // Update remaining time every second for smooth countdown
-    const interval = setInterval(() => {
-      if (disableUntil) {
-        const remaining = disableUntil - Date.now();
-        if (remaining <= 0) {
-          setIsTemporaryDisabled(false);
-          setDisableUntil(null);
+        } else {
           setRemainingTime(0);
           setDisplayTime("");
-          onTemporaryStateChange?.(false);
+        }
+      }
+    });
+
+    // Firefox fallback: Periodic storage polling
+    const pollInterval = setInterval(refreshStorageState, 500);
+
+    return () => {
+      unwatchSettings();
+      clearInterval(pollInterval);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [onTemporaryStateChange]);
+
+  // Separate countdown timer effect
+  useEffect(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+
+    if (isTemporaryDisabled && disableUntil) {
+      intervalRef.current = setInterval(async () => {
+        const remaining = disableUntil - Date.now();
+        if (remaining <= 0) {
+          // Time expired - force cancel and refresh
+          try {
+            await browser.runtime.sendMessage({
+              type: "cancelTemporaryDisable",
+            });
+            setTimeout(refreshStorageState, 100);
+          } catch (error) {
+            console.error("Failed to auto-cancel expired timer:", error);
+            // Force refresh anyway
+            refreshStorageState();
+          }
         } else {
           setRemainingTime(remaining);
           setDisplayTime(formatTime(remaining));
         }
-      }
-    }, 1000);
+      }, 1000);
+    }
 
-    return () => clearInterval(interval);
-  }, [disableUntil, onTemporaryStateChange]);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isTemporaryDisabled, disableUntil]);
 
   const handleTemporaryDisable = async (minutes: number) => {
     try {
-      await browser.runtime.sendMessage({
-        type: "temporaryDisable",
-        minutes,
-      });
-
+      // Immediate UI feedback
       const until = Date.now() + minutes * 60 * 1000;
       setIsTemporaryDisabled(true);
       setDisableUntil(until);
@@ -108,8 +156,42 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
       setDisplayTime(formatTime(minutes * 60 * 1000));
       setCustomValue("");
       onTemporaryStateChange?.(true);
+
+      // Send to background
+      await browser.runtime.sendMessage({
+        type: "temporaryDisable",
+        minutes,
+      });
+
+      // Firefox: Double-check state after delay
+      setTimeout(refreshStorageState, 200);
     } catch (error) {
       console.error("Failed to set temporary disable:", error);
+      // Revert UI on error
+      refreshStorageState();
+    }
+  };
+
+  const cancelTemporaryDisable = async () => {
+    try {
+      // Immediate UI feedback
+      setIsTemporaryDisabled(false);
+      setDisableUntil(null);
+      setRemainingTime(0);
+      setDisplayTime("");
+      onTemporaryStateChange?.(false);
+
+      // Send to background
+      await browser.runtime.sendMessage({
+        type: "cancelTemporaryDisable",
+      });
+
+      // Firefox: Double-check state after delay
+      setTimeout(refreshStorageState, 200);
+    } catch (error) {
+      console.error("Failed to cancel temporary disable:", error);
+      // Revert to actual state on error
+      refreshStorageState();
     }
   };
 
@@ -121,7 +203,6 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
 
     const minutes = unit === "hours" ? num * 60 : num;
     if (minutes > 360) {
-      // 6 hours max
       return unit === "hours"
         ? "Maximum 6 hours allowed"
         : "Maximum 360 minutes (6 hours) allowed";
@@ -155,22 +236,6 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
     }
   };
 
-  const cancelTemporaryDisable = async () => {
-    try {
-      await browser.runtime.sendMessage({
-        type: "cancelTemporaryDisable",
-      });
-
-      setIsTemporaryDisabled(false);
-      setDisableUntil(null);
-      setRemainingTime(0);
-      setDisplayTime("");
-      onTemporaryStateChange?.(false);
-    } catch (error) {
-      console.error("Failed to cancel temporary disable:", error);
-    }
-  };
-
   const formatTime = (milliseconds: number) => {
     const totalSeconds = Math.ceil(milliseconds / 1000);
     const hours = Math.floor(totalSeconds / 3600);
@@ -195,7 +260,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
   const handleSelectOption = (value: "minutes" | "hours") => {
     setTimeUnit(value);
     setIsSelectOpen(false);
-    setInputError(""); // Clear any existing error when changing units
+    setInputError("");
   };
 
   return (
@@ -245,7 +310,6 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
         </div>
       ) : (
         <div className={`space-y-3 ${!enabled ? "opacity-60" : ""}`}>
-          {/* Predefined durations */}
           <div className="grid grid-cols-5 gap-1.5">
             {predefinedDurations.map((duration) => (
               <button
@@ -263,7 +327,6 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
             ))}
           </div>
 
-          {/* Custom duration input with unit selector */}
           <div className="space-y-2">
             <div className="flex gap-2">
               <div className="flex-1 relative">
@@ -287,7 +350,6 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
                 />
               </div>
 
-              {/* Custom Select Component */}
               <div ref={selectRef} className="relative">
                 <button
                   onClick={() => enabled && setIsSelectOpen(!isSelectOpen)}

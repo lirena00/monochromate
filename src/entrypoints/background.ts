@@ -237,54 +237,36 @@ export default defineBackground(() => {
     });
   };
 
-  // Handle temporary disable
   const setTemporaryDisable = async (minutes: number) => {
     try {
       cleanupTemporaryDisable();
 
-      const currentSettings = await settings.getValue();
-      const disableUntil = Date.now() + minutes * 60 * 1000;
+      const until = Date.now() + minutes * 60 * 1000;
       await settings.setValue({
-        ...currentSettings,
-        enabled: false,
+        ...(await settings.getValue()),
         temporaryDisable: true,
-        temporaryDisableUntil: disableUntil,
+        temporaryDisableUntil: until,
       });
 
-      updateBadge(false, true);
-
+      // Set timer to auto-cancel when expired
       temporaryDisableTimer = setTimeout(async () => {
         try {
-          const latestSettings = await settings.getValue();
+          const currentSettings = await settings.getValue();
           await settings.setValue({
-            ...latestSettings,
-            enabled: true,
+            ...currentSettings,
             temporaryDisable: false,
             temporaryDisableUntil: null,
           });
-          updateBadge(true, false);
+          console.log("Temporary disable auto-expired");
         } catch (error) {
-          console.error("Failed to re-enable after timeout:", error);
-        } finally {
-          temporaryDisableTimer = null;
+          console.error("Failed to auto-cancel temporary disable:", error);
         }
       }, minutes * 60 * 1000);
 
-      browser.runtime
-        .sendMessage({
-          type: "temporaryDisableSet",
-          duration: minutes,
-          until: disableUntil,
-        })
-        .catch((error) => {
-          console.error(
-            "Failed to send temporary disable notification:",
-            error
-          );
-        });
+      disableGreyscaleForAllTabs();
+      updateBadge(false, true);
     } catch (error) {
-      console.error("Error in setTemporaryDisable:", error);
-      throw error;
+      console.error("Failed to set temporary disable:", error);
     }
   };
 
@@ -293,51 +275,40 @@ export default defineBackground(() => {
     try {
       const currentSettings = await settings.getValue();
       if (
-        !currentSettings.temporaryDisable ||
-        !currentSettings.temporaryDisableUntil
+        currentSettings.temporaryDisable &&
+        currentSettings.temporaryDisableUntil
       ) {
-        return;
-      }
-
-      const now = Date.now();
-      const disableUntil = currentSettings.temporaryDisableUntil;
-
-      if (now >= disableUntil) {
-        // Expired, re-enable
-        await settings.setValue({
-          ...currentSettings,
-          enabled: true,
-          temporaryDisable: false,
-          temporaryDisableUntil: null,
-        });
-        updateBadge(true, false);
-      } else {
-        updateBadge(false, true);
-        const remainingTime = disableUntil - now;
-        cleanupTemporaryDisable();
-
-        temporaryDisableTimer = setTimeout(async () => {
-          try {
-            const latestSettings = await settings.getValue();
-            await settings.setValue({
-              ...latestSettings,
-              enabled: true,
-              temporaryDisable: false,
-              temporaryDisableUntil: null,
-            });
-            updateBadge(true, false);
-          } catch (error) {
-            console.error(
-              "Failed to re-enable after temporary disable expired:",
-              error
-            );
-          } finally {
-            temporaryDisableTimer = null;
-          }
-        }, remainingTime);
+        const remaining = currentSettings.temporaryDisableUntil - Date.now();
+        if (remaining <= 0) {
+          // Expired - clear it immediately
+          await settings.setValue({
+            ...currentSettings,
+            temporaryDisable: false,
+            temporaryDisableUntil: null,
+          });
+          console.log("Cleared expired temporary disable on startup");
+        } else {
+          // Still valid - set timer for remaining time
+          temporaryDisableTimer = setTimeout(async () => {
+            try {
+              const settings_current = await settings.getValue();
+              await settings.setValue({
+                ...settings_current,
+                temporaryDisable: false,
+                temporaryDisableUntil: null,
+              });
+              console.log("Temporary disable auto-expired after restart");
+            } catch (error) {
+              console.error(
+                "Failed to auto-cancel temporary disable after restart:",
+                error
+              );
+            }
+          }, remaining);
+        }
       }
     } catch (error) {
-      console.error("Error in checkTemporaryDisableExpiry:", error);
+      console.error("Failed to check temporary disable expiry:", error);
     }
   };
 
@@ -560,16 +531,29 @@ export default defineBackground(() => {
       case "temporaryDisable":
         await setTemporaryDisable(message.minutes);
         break;
+
       case "cancelTemporaryDisable":
-        cleanupTemporaryDisable();
-        await settings.setValue({
-          ...currentSettings,
-          enabled: true,
-          temporaryDisable: false,
-          temporaryDisableUntil: null,
-        });
-        updateBadge(true, false);
+        try {
+          cleanupTemporaryDisable();
+          await settings.setValue({
+            ...currentSettings,
+            temporaryDisable: false,
+            temporaryDisableUntil: null,
+          });
+
+          if (currentSettings.enabled) {
+            applyGreyscaleToAllTabsDebounced(
+              currentSettings.intensity,
+              currentSettings.blacklist,
+              currentSettings.mediaExceptionEnabled
+            );
+          }
+          updateBadge(currentSettings.enabled, false);
+        } catch (error) {
+          console.error("Failed to cancel temporary disable:", error);
+        }
         break;
+
       case "getTemporaryDisableStatus":
         // Send back current temporary disable status
         browser.runtime.sendMessage({
