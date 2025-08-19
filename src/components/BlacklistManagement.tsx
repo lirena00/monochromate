@@ -56,9 +56,11 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
             <Shield size={20} />
           </div>
           <div>
-            <h2 className="font-semibold text-neutral-800">Current Site</h2>
+            <h2 className="font-semibold text-neutral-800">
+              Current Site & Media
+            </h2>
             <p className="text-sm text-neutral-500 italic">
-              Manage current website
+              Manage site exclusion settings
             </p>
           </div>
         </div>

@@ -29,28 +29,28 @@ const ShortcutBadge: React.FC<ShortcutBadgeProps> = ({
 
   const getKeyContent = (key: string) => {
     const lowerKey = key.toLowerCase();
-    if (lowerKey.includes("right") && lowerKey.includes("arrow")) {
+    if (lowerKey.includes("right")) {
       return (
         <div className="py-0.25">
           <ChevronRight size={iconSize} />
         </div>
       );
     }
-    if (lowerKey.includes("left") && lowerKey.includes("arrow")) {
+    if (lowerKey.includes("left")) {
       return (
         <div className="py-0.25">
           <ChevronLeft size={iconSize} />
         </div>
       );
     }
-    if (lowerKey.includes("up") && lowerKey.includes("arrow")) {
+    if (lowerKey.includes("up")) {
       return (
         <div className="py-0.25">
           <ChevronUp size={iconSize} />
         </div>
       );
     }
-    if (lowerKey.includes("down") && lowerKey.includes("arrow")) {
+    if (lowerKey.includes("down")) {
       return (
         <div className="py-0.25">
           <ChevronDown size={iconSize} />

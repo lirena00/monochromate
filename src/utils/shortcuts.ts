@@ -53,7 +53,7 @@ export const openShortcutsSettings = () => {
       url = "chrome://extensions/shortcuts";
       break;
     case "firefox":
-      url = "about:addons";
+      url = "https://monochromate.lirena.in/guide/shortcuts";
       break;
     default:
       url = `${browser_name}://extensions/shortcuts`;
