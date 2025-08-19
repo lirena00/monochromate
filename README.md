@@ -2,7 +2,7 @@
 
 A sleek browser extension that turns your web browsing experience into grayscale, helping reduce digital distractions and avoid doomscrolling.
 
-![Version](https://img.shields.io/badge/version-1.4.3-black)
+![Version](https://img.shields.io/badge/version-1.5.0-black)
 ![License](https://img.shields.io/badge/license-MIT-black)
 
 <p align="center">
@@ -26,6 +26,8 @@ A sleek browser extension that turns your web browsing experience into grayscale
 - **Fullscreen Support** - Seamlessly works with fullscreen content and videos
 - **Search & Filter** - Easily find and manage excluded sites with search functionality
 - **Minimal Interface** - Clean, modern UI with intuitive controls
+- **Temporary Disable** - Disable extension for specific period of time then re-enable it automatically
+- **Media-only page exclusion** - Media only page can be excluded
 
 ## 🛠️ **Development**
 
