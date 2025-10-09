@@ -311,9 +311,39 @@ export default defineBackground(() => {
     }
   };
 
+  // Check if support banner dismissal has expired on startup
+  const checkSupportBannerDismissalExpiry = async () => {
+    try {
+      const result = await browser.storage.local.get([
+        "supportBannerDismissed",
+        "supportBannerDismissedUntil",
+      ]);
+
+      if (result.supportBannerDismissed && result.supportBannerDismissedUntil) {
+        const remaining = result.supportBannerDismissedUntil - Date.now();
+        if (remaining <= 0) {
+          // Expired - clear it immediately
+          await browser.storage.local.remove([
+            "supportBannerDismissed",
+            "supportBannerDismissedUntil",
+          ]);
+          console.log("Cleared expired support banner dismissal on startup");
+        } else {
+          // Still valid - recreate alarm for remaining time
+          await browser.alarms.create("SupportBannerDismissed", {
+            when: result.supportBannerDismissedUntil,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Failed to check support banner dismissal expiry:", error);
+    }
+  };
+
   const initializeSettings = async () => {
     try {
       await checkTemporaryDisableExpiry();
+      await checkSupportBannerDismissalExpiry();
       const currentSettings = await settings.getValue();
       updateBadge(
         currentSettings.enabled && !currentSettings.temporaryDisable,
@@ -454,6 +484,20 @@ export default defineBackground(() => {
       // Temporary disable expired
       await cancelTemporaryDisable();
       console.log("Temporary disable auto-expired via alarm");
+      return;
+    }
+
+    if (alarm.name === "SupportBannerDismissed") {
+      // Support banner dismissal period expired
+      try {
+        await browser.storage.local.remove([
+          "supportBannerDismissed",
+          "supportBannerDismissedUntil",
+        ]);
+        console.log("Support banner dismissal period expired");
+      } catch (error) {
+        console.error("Error clearing support banner dismissal:", error);
+      }
       return;
     }
 
