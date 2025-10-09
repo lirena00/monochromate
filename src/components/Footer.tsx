@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Heart, Github, Star, Keyboard } from "lucide-react";
+import { Heart, Github, Star, Keyboard, Coffee } from "lucide-react";
 import { Discord } from "@/components/Icons/Discord";
 import { openShortcutsSettings } from "@/utils/shortcuts";
 
@@ -22,10 +22,7 @@ const Footer: React.FC = () => {
         storeUrl =
           "https://addons.mozilla.org/en-US/firefox/addon/monochromate/reviews/";
         break;
-      case "edge":
-        storeUrl =
-          "https://microsoftedge.microsoft.com/addons/detail/monochromate-the-best-g/jnphoibnlnibfchogdlfapbggogkppgh";
-        break;
+
       default:
         storeUrl =
           "https://chromewebstore.google.com/detail/monochromate-the-best-gre/hafcajcllbjnoolpfngclfmmgpikdhlm/reviews";
@@ -37,6 +34,14 @@ const Footer: React.FC = () => {
   return (
     <footer className="my-6">
       <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
+        <div className="text-center mb-4 pb-4 border-b border-neutral-200">
+          <h3 className="font-semibold text-neutral-800 mb-2">
+            Love Monochromate? Support Open Source!
+          </h3>
+          <p className="text-sm text-neutral-500 italic mb-3">
+            Your support helps keep Monochromate free and funds new features
+          </p>
+        </div>
         <div className="grid grid-cols-4 gap-2">
           <a
             href="https://buymeacoffee.com/lirena00"
