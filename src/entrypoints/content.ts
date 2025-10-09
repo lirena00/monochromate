@@ -108,7 +108,12 @@ const shouldApplyGrayscale = (): boolean => {
   const isBlacklisted = currentSettings.blacklist.includes(currentSite);
   const isMediaOnly = getMediaOnlyStatus();
   const isMediaException = isMediaOnly && currentSettings.imageExceptionEnabled;
-  return currentSettings.enabled && !isBlacklisted && !isMediaException;
+  return (
+    currentSettings.enabled &&
+    !currentSettings.temporaryDisable &&
+    !isBlacklisted &&
+    !isMediaException
+  );
 };
 
 const applyGrayscaleEffect = () => {
