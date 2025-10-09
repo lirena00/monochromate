@@ -224,16 +224,16 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
 
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
           <div className="text-neutral-700">
-            <Clock size={20} />
+            <Clock size={18} />
           </div>
           <div>
-            <h2 className="font-semibold text-neutral-800">
+            <h2 className="font-semibold text-sm text-neutral-800">
               Temporary Disable
             </h2>
-            <p className="text-sm text-neutral-500 italic">
+            <p className="text-xs text-neutral-500 italic">
               Auto-enable after time expires
             </p>
           </div>
@@ -241,18 +241,18 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
       </div>
 
       {isTemporaryDisabled ? (
-        <div className="p-3 bg-neutral-50 border border-neutral-200 rounded-lg">
+        <div className="p-2 bg-neutral-50 border border-neutral-200 rounded-lg">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-1.5 mb-1">
                 <div className="text-neutral-600">
-                  <Info size={12} />
+                  <Info size={10} />
                 </div>
-                <p className="text-sm font-medium text-neutral-800">
+                <p className="text-xs font-medium text-neutral-800">
                   Filter temporarily disabled
                 </p>
               </div>
-              <p className="text-xs text-neutral-600 ml-5">
+              <p className="text-xs text-neutral-600 ml-3.5">
                 {remainingTime > 0
                   ? `Auto-enabling in ${displayTime}`
                   : "Re-enabling now..."}
@@ -260,16 +260,16 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
             </div>
             <button
               onClick={cancelTemporaryDisable}
-              className="p-1.5 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
+              className="p-1 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
               title="Cancel and re-enable now"
             >
-              <X size={16} />
+              <X size={12} />
             </button>
           </div>
         </div>
       ) : (
-        <div className={`space-y-3 ${!enabled ? "opacity-60" : ""}`}>
-          <div className="grid grid-cols-5 gap-1.5">
+        <div className={`space-y-2 ${!enabled ? "opacity-60" : ""}`}>
+          <div className="grid grid-cols-5 gap-1">
             {predefinedDurations.map((duration) => (
               <button
                 key={duration.value}
@@ -286,8 +286,8 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
             ))}
           </div>
 
-          <div className="space-y-2">
-            <div className="flex gap-2">
+          <div className="space-y-1.5">
+            <div className="flex gap-1.5">
               <div className="flex-1 relative">
                 <input
                   type="text"
@@ -301,7 +301,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
                   }}
                   placeholder={getPlaceholder()}
                   disabled={!enabled}
-                  className={`w-full bg-white rounded-lg border px-3 py-2 text-sm focus:outline-none transition-colors ${
+                  className={`w-full bg-white rounded-lg border px-3 py-2 text-xs focus:outline-none transition-colors ${
                     inputError
                       ? "border-red-500"
                       : "border-neutral-200 hover:border-neutral-400 focus:border-neutral-500"
@@ -313,7 +313,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
                 <button
                   onClick={() => enabled && setIsSelectOpen(!isSelectOpen)}
                   disabled={!enabled}
-                  className={`flex items-center gap-2 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-sm hover:border-neutral-400 focus:outline-none focus:border-neutral-500 transition-colors min-w-[90px] ${
+                  className={`flex items-center gap-1.5 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs hover:border-neutral-400 focus:outline-none focus:border-neutral-500 transition-colors min-w-[85px] ${
                     !enabled ? "opacity-60 cursor-not-allowed" : ""
                   }`}
                 >
@@ -325,7 +325,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
                     }
                   </span>
                   <ChevronDown
-                    size={14}
+                    size={10}
                     className={`transition-transform ${
                       isSelectOpen ? "rotate-180" : ""
                     }`}
@@ -343,11 +343,11 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
                               option.value as "minutes" | "hours"
                             )
                           }
-                          className="flex items-center justify-between w-full px-3 py-2 text-sm cursor-pointer hover:bg-neutral-50 rounded-md outline-none"
+                          className="flex items-center justify-between w-full px-2 py-1.5 text-xs cursor-pointer hover:bg-neutral-50 rounded-md outline-none"
                         >
                           <span>{option.label}</span>
                           {timeUnit === option.value && (
-                            <Check size={14} className="text-neutral-600" />
+                            <Check size={10} className="text-neutral-600" />
                           )}
                         </button>
                       ))}
@@ -359,7 +359,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
               <button
                 onClick={handleCustomDisable}
                 disabled={!enabled || !customValue}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors whitespace-nowrap ${
+                className={`px-3 py-2 text-xs rounded-lg transition-colors whitespace-nowrap ${
                   enabled && customValue
                     ? "bg-neutral-900 text-white hover:bg-neutral-800"
                     : "bg-neutral-200 text-neutral-400 cursor-not-allowed"

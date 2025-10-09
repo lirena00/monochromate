@@ -11,14 +11,14 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
 
   const messages = [
     {
-      icon: <Gift size={20} className="text-neutral-700" />,
+      icon: <Gift size={18} className="text-neutral-700" />,
       title: "Keep Monochromate free",
       text: "Your support helps us add new features and keep the extension open source",
       cta: "Donate",
       action: () => window.open("https://buymeacoffee.com/lirena00", "_blank"),
     },
     {
-      icon: <Star size={20} className="text-neutral-700" />,
+      icon: <Star size={18} className="text-neutral-700" />,
       title: "Help others discover us",
       text: "Rate us on the extension store and help people find monochromate",
       cta: "Rate Us",
@@ -111,16 +111,16 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
 
   return (
     <div className="bg-neutral-100 relative border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all mb-4">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <div className="text-neutral-700">{currentMsg.icon}</div>
         <div className="flex-1">
-          <h2 className="font-semibold text-neutral-800">{currentMsg.title}</h2>
-          <p className="text-sm text-neutral-500 italic">{currentMsg.text}</p>
+          <h2 className="font-semibold text-sm text-neutral-800">{currentMsg.title}</h2>
+          <p className="text-xs text-neutral-500 italic">{currentMsg.text}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
             onClick={currentMsg.action}
-            className="px-3 py-1.5 text-sm bg-neutral-800 text-white rounded-lg hover:bg-neutral-900 transition-colors"
+            className="px-3 py-2 text-xs bg-neutral-800 text-white rounded-lg hover:bg-neutral-900 transition-colors"
           >
             {currentMsg.cta}
           </button>
@@ -129,7 +129,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
             className="absolute top-0 right-0 p-1 bg-neutral-800 hover:bg-neutral-900 rounded-tr-lg rounded-bl-lg transition-colors"
             title="Dismiss for 3 days"
           >
-            <X size={14} className="text-white" />
+            <X size={10} className="text-white" />
           </button>
         </div>
       </div>
