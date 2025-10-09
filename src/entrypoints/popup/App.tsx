@@ -12,6 +12,12 @@ import BlacklistManagement from "@/components/BlacklistManagement";
 import TemporaryDisableCard from "@/components/TemporaryDisableCard";
 import SupportBanner from "@/components/SupportBanner";
 import { Loader2 } from "lucide-react";
+import {
+  getDomainFromUrl,
+  getCurrentFullUrl,
+  suggestUrlPattern,
+  urlMatchesPattern,
+} from "@/utils/urlUtils";
 
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -34,6 +40,8 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
+  const [urlPatternBlacklist, setUrlPatternBlacklist] = useState<string[]>([]);
+  const [currentFullUrl, setCurrentFullUrl] = useState<string>("");
   const [mediaExceptionEnabled, setMediaExceptionEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentUrl, setCurrentUrl] = useState("");
@@ -47,10 +55,14 @@ export default function App() {
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const isCurrentUrlBlacklisted = useMemo(
-    () => blacklist.includes(currentUrl),
-    [blacklist, currentUrl]
-  );
+  const isCurrentUrlBlacklisted = useMemo(() => {
+    const domain = getDomainFromUrl(currentFullUrl || `https://${currentUrl}`);
+    const isDomainBlacklisted = blacklist.includes(domain);
+    const isPatternBlacklisted = urlPatternBlacklist.some((pattern) =>
+      urlMatchesPattern(currentFullUrl || `https://${currentUrl}`, pattern)
+    );
+    return isDomainBlacklisted || isPatternBlacklisted;
+  }, [blacklist, urlPatternBlacklist, currentUrl, currentFullUrl]);
 
   const filteredBlacklist = useMemo(
     () =>
@@ -74,6 +86,10 @@ export default function App() {
         setEnabled(currentSettings.enabled);
         setIntensity(currentSettings.intensity);
         setBlacklist(currentSettings.blacklist);
+        setUrlPatternBlacklist(currentSettings.urlPatternBlacklist || []);
+        setMediaExceptionEnabled(
+          currentSettings.mediaExceptionEnabled ?? false
+        );
         setMediaExceptionEnabled(
           currentSettings.mediaExceptionEnabled ?? false
         );
@@ -96,6 +112,8 @@ export default function App() {
         setEnabled(newSettings.enabled);
         setIntensity(newSettings.intensity);
         setBlacklist(newSettings.blacklist);
+        setUrlPatternBlacklist(newSettings.urlPatternBlacklist || []);
+        setMediaExceptionEnabled(newSettings.mediaExceptionEnabled ?? false);
         setMediaExceptionEnabled(newSettings.mediaExceptionEnabled ?? false);
         setStartMonochromate(newSettings.scheduleStart);
         setEndMonochromate(newSettings.scheduleEnd);
@@ -112,12 +130,20 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    browser.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
-      if (tabs[0]?.url) {
-        const url = new URL(tabs[0].url).hostname.replace("www.", "");
-        setCurrentUrl(url);
-      }
-    });
+    browser.tabs
+      .query({ active: true, currentWindow: true })
+      .then((tabs) => {
+        const currentTab = tabs[0];
+        if (currentTab?.url) {
+          const domain = getDomainFromUrl(currentTab.url);
+          setCurrentUrl(domain);
+          setCurrentFullUrl(currentTab.url); // Store full URL
+        }
+      })
+      .catch(() => {
+        setCurrentUrl("");
+        setCurrentFullUrl("");
+      });
   }, []);
 
   const toggleGreyscale = useCallback(() => {
@@ -172,33 +198,57 @@ export default function App() {
   }, [scheduleToggle, loading]);
 
   const addCurrentSite = useCallback(async () => {
-    if (loading || !currentUrl || blacklist.includes(currentUrl)) return;
+    if (loading || !currentUrl || isCurrentUrlBlacklisted) return;
     const newBlacklist = [...blacklist, currentUrl];
     browser.runtime.sendMessage({
       type: "setBlacklist",
       value: newBlacklist,
     });
-  }, [currentUrl, blacklist, loading]);
+  }, [currentUrl, blacklist, loading, isCurrentUrlBlacklisted]);
+
+  const addCurrentUrl = useCallback(async () => {
+    // Updated function
+    if (loading || !currentFullUrl || isCurrentUrlBlacklisted) return;
+
+    const suggestedPattern = suggestUrlPattern(currentFullUrl);
+    const newUrlPatternBlacklist = [...urlPatternBlacklist, suggestedPattern];
+
+    browser.runtime.sendMessage({
+      type: "setUrlPatternBlacklist",
+      value: newUrlPatternBlacklist,
+    });
+  }, [currentFullUrl, urlPatternBlacklist, loading, isCurrentUrlBlacklisted]);
 
   const removeSite = useCallback(
-    (site: string) => {
+    (site: string, type: "domain" | "pattern" = "domain") => {
+      // Updated function
       if (loading) return;
-      const newBlacklist = blacklist.filter((s) => s !== site);
-      browser.runtime.sendMessage({
-        type: "setBlacklist",
-        value: newBlacklist,
-      });
-    },
-    [blacklist, loading]
-  );
 
+      if (type === "domain") {
+        const newBlacklist = blacklist.filter((s) => s !== site);
+        browser.runtime.sendMessage({
+          type: "setBlacklist",
+          value: newBlacklist,
+        });
+      } else {
+        const newUrlPatternBlacklist = urlPatternBlacklist.filter(
+          (s) => s !== site
+        );
+        browser.runtime.sendMessage({
+          type: "setUrlPatternBlacklist",
+          value: newUrlPatternBlacklist,
+        });
+      }
+    },
+    [blacklist, urlPatternBlacklist, loading]
+  );
   const handleReturnToMain = useCallback(() => {
     setView("main");
     setSearchTerm("");
   }, []);
 
   return (
-    <div className="w-[420px] min-h-[675px] bg-white text-neutral-800 p-6 flex flex-col">
+    <div className="w-[420px] min-h-[800px] bg-white text-neutral-800 p-6 flex flex-col">
       {loading ? (
         <div className="flex justify-center items-center flex-1">
           <Loader2 size={24} className="animate-spin" />
@@ -223,13 +273,15 @@ export default function App() {
             />
             <ExcludedSitesCard
               currentUrl={currentUrl}
+              currentFullUrl={currentFullUrl}
               blacklist={blacklist}
+              urlPatternBlacklist={urlPatternBlacklist}
               isCurrentUrlBlacklisted={isCurrentUrlBlacklisted}
               onAddCurrentSite={addCurrentSite}
+              onAddCurrentUrl={addCurrentUrl}
               onRemoveSite={removeSite}
               onManageAllSites={() => setView("blacklist")}
             />
-
             <ScheduleCard
               scheduleToggle={scheduleToggle}
               tempStartTime={tempStartTime}
@@ -257,11 +309,15 @@ export default function App() {
         <BlacklistManagement
           searchTerm={searchTerm}
           currentUrl={currentUrl}
+          currentFullUrl={currentFullUrl}
+          blacklist={blacklist}
+          urlPatternBlacklist={urlPatternBlacklist}
           filteredBlacklist={filteredBlacklist}
           isCurrentUrlBlacklisted={isCurrentUrlBlacklisted}
           onSearchChange={setSearchTerm}
           onReturnToMain={handleReturnToMain}
           onAddCurrentSite={addCurrentSite}
+          onAddCurrentUrl={addCurrentUrl}
           onRemoveSite={removeSite}
           mediaExceptionEnabled={mediaExceptionEnabled}
           onToggleMediaException={toggleMediaException}
