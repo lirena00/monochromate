@@ -34,23 +34,23 @@ const Footer: React.FC = () => {
   return (
     <footer className="my-6">
       <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-        <div className="text-center mb-4 pb-4 border-b border-neutral-200">
-          <h3 className="font-semibold text-neutral-800 mb-2">
+        <div className="text-center mb-2 pb-2 border-b border-neutral-200">
+          <h3 className="font-semibold text-sm text-neutral-800 mb-1">
             Love Monochromate? Support Open Source!
           </h3>
-          <p className="text-sm text-neutral-500 italic mb-3">
+          <p className="text-xs text-neutral-500 italic mb-2">
             Your support helps keep Monochromate free and funds new features
           </p>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-4 gap-1.5">
           <a
             href="https://buymeacoffee.com/lirena00"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-white border border-neutral-200 rounded-lg p-3 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1.5"
+            className="bg-white border border-neutral-200 rounded-lg p-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1"
           >
             <span className="text-red-500 group-hover:scale-110 transition-transform">
-              <Heart size={16} />
+              <Heart size={12} />
             </span>
             <span className="text-xs text-neutral-600 group-hover:text-neutral-800">
               Support
@@ -61,7 +61,7 @@ const Footer: React.FC = () => {
             href="https://discord.gg/pdxMMNGWCU"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-white border border-neutral-200 rounded-lg p-3 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1.5"
+            className="bg-white border border-neutral-200 rounded-lg p-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1"
           >
             <span className="text-indigo-500 group-hover:scale-110 transition-transform">
               <Discord />
@@ -75,10 +75,10 @@ const Footer: React.FC = () => {
             href="https://github.com/lirena00/monochromate"
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-white border border-neutral-200 rounded-lg p-3 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1.5"
+            className="bg-white border border-neutral-200 rounded-lg p-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1"
           >
             <span className="text-neutral-700 group-hover:scale-110 transition-transform">
-              <Github size={16} />
+              <Github size={12} />
             </span>
             <span className="text-xs text-neutral-600 group-hover:text-neutral-800">
               Github
@@ -87,10 +87,10 @@ const Footer: React.FC = () => {
 
           <button
             onClick={openShortcutsSettings}
-            className="bg-white border border-neutral-200 rounded-lg p-3 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1.5 cursor-pointer"
+            className="bg-white border border-neutral-200 rounded-lg p-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1 cursor-pointer"
           >
             <span className="text-neutral-700 group-hover:scale-110 transition-transform">
-              <Keyboard size={16} />
+              <Keyboard size={12} />
             </span>
             <span className="text-xs text-neutral-600 group-hover:text-neutral-800">
               Shortcuts
@@ -98,16 +98,16 @@ const Footer: React.FC = () => {
           </button>
         </div>
 
-        <div className="mt-2">
+        <div className="mt-1.5">
           <div
-            className="bg-white border border-neutral-200 rounded-lg p-3 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1.5 cursor-pointer"
+            className="bg-white border border-neutral-200 rounded-lg p-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1 cursor-pointer"
             onClick={() => handleStarClick(5)}
           >
             <div className="flex gap-0.5">
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
-                  size={16}
+                  size={12}
                   className={`transition-all cursor-pointer ${
                     star <= (hoveredStar || selectedRating || 0)
                       ? "text-yellow-500 fill-yellow-500"
@@ -128,7 +128,7 @@ const Footer: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-3 pt-3 border-t border-neutral-200 text-center">
+        <div className="mt-2 pt-2 border-t border-neutral-200 text-center">
           <span className="text-xs text-neutral-500">
             Made with ❤️ by{" "}
             <a

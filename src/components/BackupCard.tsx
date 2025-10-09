@@ -87,23 +87,25 @@ export default function Backup() {
 
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <div className="text-neutral-700">
-          <Upload size={20} />
+          <Upload size={18} />
         </div>
         <div>
-          <h2 className="font-semibold text-neutral-800">Backup Settings</h2>
-          <p className="text-sm text-neutral-500 italic">
+          <h2 className="font-semibold text-sm text-neutral-800">
+            Backup Settings
+          </h2>
+          <p className="text-xs text-neutral-500 italic">
             Export or import your configuration
           </p>
         </div>
       </div>
 
       {importStatus === "success" && (
-        <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-3">
-          <div className="flex items-center gap-2">
+        <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-2">
+          <div className="flex items-center gap-1.5">
             <div className="text-green-500">
-              <CheckCircle size={12} />
+              <CheckCircle size={10} />
             </div>
             <p className="text-xs text-green-700">
               Settings imported successfully!
@@ -113,10 +115,10 @@ export default function Backup() {
       )}
 
       {importStatus === "error" && (
-        <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-3">
-          <div className="flex items-center gap-2">
+        <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-2">
+          <div className="flex items-center gap-1.5">
             <div className="text-red-500">
-              <XCircle size={12} />
+              <XCircle size={10} />
             </div>
             <p className="text-xs text-red-700">
               Import failed. Please try again with a valid backup file.
@@ -126,10 +128,10 @@ export default function Backup() {
       )}
 
       {exportStatus === "success" && (
-        <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-3">
-          <div className="flex items-center gap-2">
+        <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-2">
+          <div className="flex items-center gap-1.5">
             <div className="text-green-500">
-              <CheckCircle size={12} />
+              <CheckCircle size={10} />
             </div>
             <p className="text-xs text-green-700">
               Settings exported successfully!
@@ -139,10 +141,10 @@ export default function Backup() {
       )}
 
       {exportStatus === "error" && (
-        <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-3">
-          <div className="flex items-center gap-2">
+        <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-2">
+          <div className="flex items-center gap-1.5">
             <div className="text-red-500">
-              <XCircle size={12} />
+              <XCircle size={10} />
             </div>
             <p className="text-xs text-red-700">
               Export failed. Please try again.
@@ -152,36 +154,36 @@ export default function Backup() {
       )}
 
       {isFirefox ? (
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button
             onClick={handleExport}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-xs hover:bg-neutral-200 transition-colors"
           >
-            <Download size={15} />
+            <Download size={12} />
             Export
           </button>
           <button
             onClick={openBackupPage}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-900 text-white rounded-lg text-sm hover:bg-neutral-800 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-900 text-white rounded-lg text-xs hover:bg-neutral-800 transition-colors"
           >
-            <ExternalLink size={15} />
+            <ExternalLink size={12} />
             Import
           </button>
         </div>
       ) : (
-        <div className="flex gap-2">
+        <div className="flex gap-1.5">
           <button
             onClick={handleExport}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-xs hover:bg-neutral-200 transition-colors"
           >
-            <Download size={15} />
+            <Download size={12} />
             Export
           </button>
           <button
             onClick={handleImport}
-            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
+            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-xs hover:bg-neutral-200 transition-colors"
           >
-            <Upload size={15} />
+            <Upload size={12} />
             Import
           </button>
         </div>

@@ -92,19 +92,19 @@ const ScheduleCard: React.FC<ScheduleCardProps> = ({
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div className="text-neutral-700">
-            <AlarmClock size={20} />
+            <AlarmClock size={18} />
           </div>
           <div>
-            <h2 className="font-semibold text-neutral-800">Schedule</h2>
-            <p className="text-sm text-neutral-500 italic">
+            <h2 className="font-semibold text-sm text-neutral-800">Schedule</h2>
+            <p className="text-xs text-neutral-500 italic">
               Schedule monochrome mode
             </p>
           </div>
         </div>
         <button
-          className={`px-4 py-1.5 rounded-lg text-sm transition-colors ${
+          className={`px-3 py-2 rounded-lg text-xs transition-colors ${
             scheduleToggle
               ? "bg-neutral-900 text-neutral-50 hover:bg-neutral-800 active:bg-neutral-950"
               : "bg-neutral-100 text-neutral-700 border border-neutral-300 hover:bg-neutral-200 hover:border-neutral-400"
@@ -116,24 +116,24 @@ const ScheduleCard: React.FC<ScheduleCardProps> = ({
       </div>
 
       {scheduleText && (
-        <div className="mb-3 p-2 bg-neutral-50 border border-neutral-200 rounded-lg">
-          <div className="flex items-center gap-2">
+        <div className="mb-2 p-2 bg-neutral-50 border border-neutral-200 rounded-lg">
+          <div className="flex items-center gap-1.5">
             <div className="text-neutral-500">
-              <Info size={12} />
+              <Info size={10} />
             </div>
             <p className="text-xs text-neutral-600">{scheduleText}</p>
           </div>
         </div>
       )}
 
-      <div className={`space-y-3 ${!scheduleToggle ? "opacity-60" : ""}`}>
-        <div className="flex gap-2 items-center">
-          <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
+      <div className={`space-y-2 ${!scheduleToggle ? "opacity-60" : ""}`}>
+        <div className="flex gap-1.5 items-center">
+          <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-2 py-1.5 hover:border-neutral-400 transition-all">
             <div className="flex items-center justify-between">
               <span className="text-xs text-neutral-500">Start:</span>
               <input
                 type="time"
-                className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
+                className="bg-transparent border-0 text-xs text-right focus:outline-hidden"
                 value={tempStartTime}
                 onChange={(e) => onStartTimeChange(e.target.value)}
                 disabled={!scheduleToggle}
@@ -141,12 +141,12 @@ const ScheduleCard: React.FC<ScheduleCardProps> = ({
             </div>
           </div>
 
-          <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-3 py-2 hover:border-neutral-400 transition-all">
+          <div className="flex-1 bg-white rounded-lg border border-neutral-200 px-2 py-1.5 hover:border-neutral-400 transition-all">
             <div className="flex items-center justify-between">
               <span className="text-xs text-neutral-500">End:</span>
               <input
                 type="time"
-                className="bg-transparent border-0 text-sm text-right focus:outline-hidden"
+                className="bg-transparent border-0 text-xs text-right focus:outline-hidden"
                 value={tempEndTime}
                 onChange={(e) => onEndTimeChange(e.target.value)}
                 disabled={!scheduleToggle}
@@ -162,7 +162,7 @@ const ScheduleCard: React.FC<ScheduleCardProps> = ({
             (tempStartTime === startMonochromate &&
               tempEndTime === endMonochromate)
           }
-          className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors ${
+          className={`w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs transition-colors ${
             !scheduleToggle ||
             (tempStartTime === startMonochromate &&
               tempEndTime === endMonochromate)
@@ -170,7 +170,7 @@ const ScheduleCard: React.FC<ScheduleCardProps> = ({
               : "bg-neutral-900 text-white hover:bg-neutral-800"
           }`}
         >
-          <Save size={15} />
+          <Save size={12} />
           Save Schedule
         </button>
       </div>

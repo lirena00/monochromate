@@ -24,13 +24,15 @@ const IntensityCard: React.FC<IntensityCardProps> = ({
 
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      <div className="flex items-center gap-3 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <div className="text-neutral-700">
-          <Sliders size={20} />
+          <Sliders size={18} />
         </div>
         <div className="flex-1">
-          <h2 className="font-semibold text-neutral-800">Filter Intensity</h2>
-          <p className="text-sm text-neutral-500 italic">Adjust the strength</p>
+          <h2 className="font-semibold text-sm text-neutral-800">
+            Filter Intensity
+          </h2>
+          <p className="text-xs text-neutral-500 italic">Adjust the strength</p>
         </div>
       </div>
 
@@ -45,11 +47,11 @@ const IntensityCard: React.FC<IntensityCardProps> = ({
           className="w-full accent-neutral-900"
         />
 
-        <div className="flex justify-between items-center mt-2">
+        <div className="flex justify-between items-center mt-1.5">
           {decreaseShortcut && (
             <ShortcutBadge size="xs" shortcut={decreaseShortcut} />
           )}
-          <div className="text-sm text-neutral-600 ">{intensity}%</div>
+          <div className="text-xs text-neutral-600 ">{intensity}%</div>
           {increaseShortcut && (
             <ShortcutBadge size="xs" shortcut={increaseShortcut} />
           )}

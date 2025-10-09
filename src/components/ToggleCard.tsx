@@ -30,21 +30,23 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <div className="text-neutral-700">
-            <Power size={20} />
+            <Power size={18} />
           </div>
           <div className="flex flex-col gap-1">
-            <h2 className="font-semibold text-neutral-800">Greyscale Filter</h2>
-            <p className="text-sm text-neutral-500 italic">
+            <h2 className="font-semibold text-sm text-neutral-800">
+              Greyscale Filter
+            </h2>
+            <p className="text-xs text-neutral-500 italic">
               Toggle monochrome mode
             </p>
             <ShortcutBadge shortcut={shortcut} />
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <button
-            className={`px-4 py-2 rounded-lg transition-colors ${
+            className={`px-3 py-2 rounded-lg text-xs transition-colors ${
               isDisabled
                 ? "bg-neutral-200 text-neutral-400 cursor-not-allowed"
                 : enabled

@@ -372,14 +372,15 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                 checked={mediaExceptionEnabled}
                 onChange={onToggleMediaException}
               />
-              <div className="w-8 h-4 bg-neutral-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[1px] after:left-[1px] after:bg-white after:border-neutral-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-neutral-900"></div>
+              <div className="w-9 h-5 bg-neutral-200 rounded-full peer-checked:bg-neutral-900 transition-colors"></div>
+              <div className="absolute top-0.5 left-0.5 bg-white border border-neutral-300 rounded-full h-4 w-4 transition-transform peer-checked:translate-x-4"></div>
             </label>
           </div>
         </div>
       </div>
 
       {/* All Excluded Sites Card */}
-      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all flex-1 flex flex-col min-h-0">
+      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all flex-1 flex flex-col min-h-[350px]">
         <div className="flex items-center gap-3 mb-3">
           <div className="text-neutral-700">
             <Filter size={18} />

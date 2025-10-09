@@ -25,7 +25,7 @@ const ShortcutBadge: React.FC<ShortcutBadgeProps> = ({
     sm: "text-sm px-2 py-1",
   };
 
-  const iconSize = size === "xs" ? 14 : 14;
+  const iconSize = 14;
 
   const getKeyContent = (key: string) => {
     const lowerKey = key.toLowerCase();
@@ -61,7 +61,7 @@ const ShortcutBadge: React.FC<ShortcutBadgeProps> = ({
   };
 
   return (
-    <div className="flex items-center gap-0.75">
+    <div className="flex items-center gap-0.5">
       {keys.map((key, index) => (
         <React.Fragment key={index}>
           <span
