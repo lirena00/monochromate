@@ -4,9 +4,13 @@ import {
   isMediaOnlyPage,
   clearMediaCheckCache,
 } from "@/utils/MediaCheckUtil";
-
+import { shouldExcludeUrl, getDomainFromUrl } from "@/utils/urlUtils";
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
+};
+
+const getCurrentUrl = () => {
+  return window.location.href;
 };
 
 let overlayElement: HTMLDivElement | null = null;
@@ -14,6 +18,7 @@ let currentSettings = {
   enabled: false,
   intensity: 100,
   blacklist: [] as string[],
+  urlPatternBlacklist: [] as string[],
   temporaryDisable: false,
   temporaryDisableUntil: null as number | null,
   imageExceptionEnabled: false,
@@ -104,18 +109,21 @@ const getFullscreenElement = (): Element | null => {
 };
 
 const shouldApplyGrayscale = (): boolean => {
-  const currentSite = getCurrentHostname();
-  const isBlacklisted = currentSettings.blacklist.includes(currentSite);
+  const currentUrl = getCurrentUrl();
+  const isExcluded = shouldExcludeUrl(
+    currentUrl,
+    currentSettings.blacklist,
+    currentSettings.urlPatternBlacklist
+  );
   const isMediaOnly = getMediaOnlyStatus();
   const isMediaException = isMediaOnly && currentSettings.imageExceptionEnabled;
   return (
     currentSettings.enabled &&
     !currentSettings.temporaryDisable &&
-    !isBlacklisted &&
+    !isExcluded &&
     !isMediaException
   );
 };
-
 const applyGrayscaleEffect = () => {
   const shouldApply = shouldApplyGrayscale();
   const fullscreenElement = getFullscreenElement();
@@ -212,11 +220,11 @@ export default defineContentScript({
       enabled: initialSettings.enabled,
       intensity: initialSettings.intensity,
       blacklist: initialSettings.blacklist,
+      urlPatternBlacklist: initialSettings.urlPatternBlacklist || [],
       imageExceptionEnabled: initialSettings.mediaExceptionEnabled,
       temporaryDisable: initialSettings.temporaryDisable,
       temporaryDisableUntil: initialSettings.temporaryDisableUntil,
     };
-
     const initializeGrayscale = () => {
       // Use quick debounce for initial load
       quickMediaCheck(() => {
@@ -238,12 +246,12 @@ export default defineContentScript({
           enabled: newSettings.enabled,
           intensity: newSettings.intensity,
           blacklist: newSettings.blacklist,
+          urlPatternBlacklist: newSettings.urlPatternBlacklist || [],
           temporaryDisable: newSettings.temporaryDisable,
           temporaryDisableUntil: newSettings.temporaryDisableUntil,
           imageExceptionEnabled: newSettings.mediaExceptionEnabled,
         };
 
-        // Apply changes immediately for settings updates
         applyGrayscaleEffect();
       }
     });

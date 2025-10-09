@@ -1,5 +1,6 @@
 import { isMediaOnlyPage } from "@/utils/MediaCheckUtil";
 import { settings } from "@/utils/storage";
+import { shouldExcludeUrl, getDomainFromUrl } from "@/utils/urlUtils";
 
 export default defineBackground(() => {
   let settingsInitialized = false;
@@ -44,14 +45,20 @@ export default defineBackground(() => {
 
   // Function to determine if grayscale should be applied
   const shouldApplyGrayscale = (
-    domain: string,
+    url: string,
     isMediaOnly: boolean,
     settings: any
   ): boolean => {
+    const isExcluded = shouldExcludeUrl(
+      url,
+      settings.blacklist,
+      settings.urlBlacklist || []
+    );
+
     return (
       settings.enabled &&
-      domain &&
-      !settings.blacklist.includes(domain) &&
+      url &&
+      !isExcluded &&
       !(isMediaOnly && settings.imageExceptionEnabled)
     );
   };
@@ -61,13 +68,13 @@ export default defineBackground(() => {
     (
       intensity: number = 100,
       blacklist: string[] = [],
+      urlPatternBlacklist: string[] = [],
       imageExceptionEnabled: boolean = false
     ) => {
       browser.tabs.query({}).then((tabs) => {
         const tabsToUpdate = tabs.filter((tab) => {
           if (!tab.id || !tab.url) return false;
-          const domain = getHostname(tab.url);
-          return domain && !blacklist.includes(domain);
+          return !shouldExcludeUrl(tab.url, blacklist, urlPatternBlacklist); // Updated
         });
 
         // Batch process tabs that need updating
@@ -554,6 +561,12 @@ export default defineBackground(() => {
           blacklist: message.value,
         });
         break;
+      case "setUrlPatternBlacklist": // Updated case name
+        await settings.setValue({
+          ...currentSettings,
+          urlPatternBlacklist: message.value,
+        });
+        break;
       case "toggleMediaException":
         await settings.setValue({
           ...currentSettings,
@@ -607,30 +620,39 @@ export default defineBackground(() => {
           .then((tabs) => {
             const currentTab = tabs[0];
             if (currentTab?.url) {
-              const domain = getHostname(currentTab.url);
-              if (domain) {
-                const isCurrentUrlBlacklisted =
-                  currentSettings.blacklist.includes(domain);
+              const currentUrl = currentTab.url;
+              const domain = getDomainFromUrl(currentUrl);
 
-                if (isCurrentUrlBlacklisted) {
-                  const updatedBlacklist = currentSettings.blacklist.filter(
-                    (site) => site !== domain
-                  );
-                  settings.setValue({
-                    ...currentSettings,
-                    blacklist: updatedBlacklist,
-                  });
-                } else {
-                  settings.setValue({
-                    ...currentSettings,
-                    blacklist: [...currentSettings.blacklist, domain],
-                  });
-                }
+              // Check if current URL is excluded (domain or pattern)
+              const isExcluded = shouldExcludeUrl(
+                currentUrl,
+                currentSettings.blacklist,
+                currentSettings.urlPatternBlacklist || [] // Updated
+              );
+              if (isExcluded) {
+                // Remove from both lists if present
+                const updatedBlacklist = currentSettings.blacklist.filter(
+                  (site) => site !== domain
+                );
+                const updatedUrlPatternBlacklist = (
+                  currentSettings.urlPatternBlacklist || []
+                ).filter((pattern) => !urlMatchesPattern(currentUrl, pattern));
+
+                settings.setValue({
+                  ...currentSettings,
+                  blacklist: updatedBlacklist,
+                  urlPatternBlacklist: updatedUrlPatternBlacklist, // Updated
+                });
+              } else {
+                // Add domain (default behavior)
+                settings.setValue({
+                  ...currentSettings,
+                  blacklist: [...currentSettings.blacklist, domain],
+                });
               }
             }
           });
         break;
-
       case "increase_intensity":
         if (!currentSettings.enabled) break;
         const newIntensityUp = Math.min(100, currentSettings.intensity + 10);

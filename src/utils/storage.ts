@@ -6,10 +6,22 @@ type MonofilterTypes_prev = {
   scheduleEnd: string;
   schedule: boolean;
 };
+type MonofilterTypes_prev2 = {
+  enabled: boolean;
+  intensity: number;
+  blacklist: string[];
+  scheduleStart: string;
+  scheduleEnd: string;
+  schedule: boolean;
+  temporaryDisable: boolean;
+  temporaryDisableUntil: number | null;
+  mediaExceptionEnabled: boolean;
+};
 type MonofilterTypes = {
   enabled: boolean;
   intensity: number;
   blacklist: string[];
+  urlPatternBlacklist: string[]; // New: specific URL exclusions
   scheduleStart: string;
   scheduleEnd: string;
   schedule: boolean;
@@ -25,6 +37,7 @@ export const settings = storage.defineItem<MonofilterTypes>(
       enabled: true,
       intensity: 100,
       blacklist: ["localhost"],
+      urlPatternBlacklist: [], // New field
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
@@ -32,14 +45,20 @@ export const settings = storage.defineItem<MonofilterTypes>(
       temporaryDisableUntil: null,
       mediaExceptionEnabled: false,
     },
-    version: 2,
+    version: 3,
     migrations: {
-      2: (oldValue: MonofilterTypes_prev): MonofilterTypes => {
+      2: (oldValue: MonofilterTypes_prev): MonofilterTypes_prev2 => {
         return {
           ...oldValue,
           temporaryDisable: false,
           temporaryDisableUntil: null,
           mediaExceptionEnabled: false,
+        };
+      },
+      3: (oldValue: MonofilterTypes_prev2): MonofilterTypes => {
+        return {
+          ...oldValue,
+          urlPatternBlacklist: [],
         };
       },
     },
