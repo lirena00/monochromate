@@ -114,7 +114,9 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
       <div className="flex items-center gap-2">
         <div className="text-neutral-700">{currentMsg.icon}</div>
         <div className="flex-1">
-          <h2 className="font-semibold text-sm text-neutral-800">{currentMsg.title}</h2>
+          <h2 className="font-semibold text-sm text-neutral-800">
+            {currentMsg.title}
+          </h2>
           <p className="text-xs text-neutral-500 italic">{currentMsg.text}</p>
         </div>
         <div className="flex items-center gap-1.5">

@@ -29,7 +29,9 @@ const IntensityCard: React.FC<IntensityCardProps> = ({
           <Sliders size={18} />
         </div>
         <div className="flex-1">
-          <h2 className="font-semibold text-sm text-neutral-800">Filter Intensity</h2>
+          <h2 className="font-semibold text-sm text-neutral-800">
+            Filter Intensity
+          </h2>
           <p className="text-xs text-neutral-500 italic">Adjust the strength</p>
         </div>
       </div>
