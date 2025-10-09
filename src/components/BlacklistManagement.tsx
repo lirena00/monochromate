@@ -380,7 +380,7 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
       </div>
 
       {/* All Excluded Sites Card */}
-      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all flex-1 flex flex-col min-h-0">
+      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all flex-1 flex flex-col min-h-[350px]">
         <div className="flex items-center gap-3 mb-3">
           <div className="text-neutral-700">
             <Filter size={18} />
