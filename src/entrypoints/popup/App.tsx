@@ -10,6 +10,7 @@ import WarningCard from "@/components/WarningCard";
 import Footer from "@/components/Footer";
 import BlacklistManagement from "@/components/BlacklistManagement";
 import TemporaryDisableCard from "@/components/TemporaryDisableCard";
+import SupportBanner from "@/components/SupportBanner";
 import { Loader2 } from "lucide-react";
 
 const useDebounce = (value: string, delay: number) => {
@@ -205,6 +206,9 @@ export default function App() {
       ) : view === "main" ? (
         <>
           <Header />
+
+          <SupportBanner />
+
           <div className="grid grid-cols-1 gap-4 flex-1">
             <WarningCard currentUrl={currentUrl} />
 
