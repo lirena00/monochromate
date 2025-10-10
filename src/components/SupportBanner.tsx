@@ -34,9 +34,6 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
             storeUrl =
               "https://addons.mozilla.org/en-US/firefox/addon/monochromate/reviews/";
             break;
-          case "edge":
-            storeUrl =
-              "https://microsoftedge.microsoft.com/addons/detail/monochromate-the-best-g/jnphoibnlnibfchogdlfapbggogkppgh";
             break;
           default:
             storeUrl =
@@ -110,7 +107,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
   const currentMsg = messages[currentMessage];
 
   return (
-    <div className="bg-neutral-100 relative border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all mb-4">
+    <div className="bg-neutral-100 relative border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
       <div className="flex items-center gap-2">
         <div className="text-neutral-700">{currentMsg.icon}</div>
         <div className="flex-1">

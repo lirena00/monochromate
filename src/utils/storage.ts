@@ -37,7 +37,7 @@ export const settings = storage.defineItem<MonofilterTypes>(
       enabled: true,
       intensity: 100,
       blacklist: ["localhost"],
-      urlPatternBlacklist: [], // New field
+      urlPatternBlacklist: [],
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,

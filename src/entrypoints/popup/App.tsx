@@ -257,11 +257,9 @@ export default function App() {
         <>
           <Header />
 
-          <SupportBanner />
-
           <div className="grid grid-cols-1 gap-4 flex-1">
             <WarningCard currentUrl={currentUrl} />
-
+            <SupportBanner />
             <GreyscaleToggleCard
               enabled={enabled}
               onToggle={toggleGreyscale}

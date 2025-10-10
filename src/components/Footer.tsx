@@ -50,7 +50,7 @@ const Footer: React.FC = () => {
             className="bg-white border border-neutral-200 rounded-lg p-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1"
           >
             <span className="text-red-500 group-hover:scale-110 transition-transform">
-              <Heart size={12} />
+              <Heart size={16} />
             </span>
             <span className="text-xs text-neutral-600 group-hover:text-neutral-800">
               Support
@@ -78,7 +78,7 @@ const Footer: React.FC = () => {
             className="bg-white border border-neutral-200 rounded-lg p-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1"
           >
             <span className="text-neutral-700 group-hover:scale-110 transition-transform">
-              <Github size={12} />
+              <Github size={16} />
             </span>
             <span className="text-xs text-neutral-600 group-hover:text-neutral-800">
               Github
@@ -90,7 +90,7 @@ const Footer: React.FC = () => {
             className="bg-white border border-neutral-200 rounded-lg p-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex flex-col items-center gap-1 cursor-pointer"
           >
             <span className="text-neutral-700 group-hover:scale-110 transition-transform">
-              <Keyboard size={12} />
+              <Keyboard size={16} />
             </span>
             <span className="text-xs text-neutral-600 group-hover:text-neutral-800">
               Shortcuts
@@ -107,7 +107,7 @@ const Footer: React.FC = () => {
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
-                  size={12}
+                  size={16}
                   className={`transition-all cursor-pointer ${
                     star <= (hoveredStar || selectedRating || 0)
                       ? "text-yellow-500 fill-yellow-500"
