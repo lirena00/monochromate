@@ -30,4 +30,4 @@ dist/*
 
 .env
 .env.*
-!.env.example
+!.env.examplepnpm-lock.yaml
