@@ -1,4 +1,4 @@
-type MonofilterTypes_prev = {
+type MonofilterTypes_v1 = {
   enabled: boolean;
   intensity: number;
   blacklist: string[];
@@ -6,7 +6,8 @@ type MonofilterTypes_prev = {
   scheduleEnd: string;
   schedule: boolean;
 };
-type MonofilterTypes_prev2 = {
+
+type MonofilterTypes_v2 = {
   enabled: boolean;
   intensity: number;
   blacklist: string[];
@@ -17,11 +18,28 @@ type MonofilterTypes_prev2 = {
   temporaryDisableUntil: number | null;
   mediaExceptionEnabled: boolean;
 };
+
+type MonofilterTypes_v3 = {
+  enabled: boolean;
+  intensity: number;
+  blacklist: string[];
+  urlPatternBlacklist: string[];
+  scheduleStart: string;
+  scheduleEnd: string;
+  schedule: boolean;
+  temporaryDisable: boolean;
+  temporaryDisableUntil: number | null;
+  mediaExceptionEnabled: boolean;
+};
+
 type MonofilterTypes = {
   enabled: boolean;
   intensity: number;
   blacklist: string[];
-  urlPatternBlacklist: string[]; // New: specific URL exclusions
+  urlPatternBlacklist: string[];
+  whitelist: string[];
+  urlPatternWhitelist: string[];
+  mode: 'blacklist' | 'whitelist';
   scheduleStart: string;
   scheduleEnd: string;
   schedule: boolean;
@@ -38,6 +56,9 @@ export const settings = storage.defineItem<MonofilterTypes>(
       intensity: 100,
       blacklist: ["localhost"],
       urlPatternBlacklist: [],
+      whitelist: [],
+      urlPatternWhitelist: [],
+      mode: 'blacklist',
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
@@ -45,9 +66,9 @@ export const settings = storage.defineItem<MonofilterTypes>(
       temporaryDisableUntil: null,
       mediaExceptionEnabled: false,
     },
-    version: 3,
+    version: 4,
     migrations: {
-      2: (oldValue: MonofilterTypes_prev): MonofilterTypes_prev2 => {
+      2: (oldValue: MonofilterTypes_v1): MonofilterTypes_v2 => {
         return {
           ...oldValue,
           temporaryDisable: false,
@@ -55,10 +76,18 @@ export const settings = storage.defineItem<MonofilterTypes>(
           mediaExceptionEnabled: false,
         };
       },
-      3: (oldValue: MonofilterTypes_prev2): MonofilterTypes => {
+      3: (oldValue: MonofilterTypes_v2): MonofilterTypes_v3 => {
         return {
           ...oldValue,
           urlPatternBlacklist: [],
+        };
+      },
+      4: (oldValue: MonofilterTypes_v3): MonofilterTypes => {
+        return {
+          ...oldValue,
+          mode: 'blacklist',
+          whitelist: [],
+          urlPatternWhitelist: [],
         };
       },
     },

@@ -254,3 +254,134 @@ export const isValidUrlPattern = (pattern: string): boolean => {
     return false;
   }
 };
+
+/**
+ * Parsed site entry from bulk import
+ */
+export interface ParsedSite {
+  value: string;
+  type: "domain" | "pattern";
+  valid: boolean;
+}
+
+/**
+ * Parses comma/newline/space separated text into site entries
+ * Extracts domains from full URLs and identifies patterns
+ */
+export const parseSitesFromText = (text: string): ParsedSite[] => {
+  if (!text.trim()) return [];
+
+  // Split by comma, newline, or multiple spaces
+  const entries = text
+    .split(/[,\n]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  const results: ParsedSite[] = [];
+
+  for (const entry of entries) {
+    // Skip empty entries
+    if (!entry) continue;
+
+    // Check if it's a pattern (contains wildcard)
+    const isPattern = entry.includes("*");
+
+    if (isPattern) {
+      results.push({
+        value: entry.replace(/^(https?:\/\/)?(www\.)?/, ""),
+        type: "pattern",
+        valid: isValidUrlPattern(entry),
+      });
+    } else {
+      // Try to extract domain
+      try {
+        const domain = getDomainFromUrl(entry);
+        if (domain && domain.includes(".")) {
+          results.push({
+            value: domain,
+            type: "domain",
+            valid: true,
+          });
+        } else {
+          // Might be a simple domain without protocol
+          const cleanEntry = entry
+            .replace(/^(https?:\/\/)?(www\.)?/, "")
+            .split("/")[0];
+          if (cleanEntry.includes(".")) {
+            results.push({
+              value: cleanEntry,
+              type: "domain",
+              valid: true,
+            });
+          } else {
+            results.push({
+              value: entry,
+              type: "domain",
+              valid: false,
+            });
+          }
+        }
+      } catch {
+        results.push({
+          value: entry,
+          type: "domain",
+          valid: false,
+        });
+      }
+    }
+  }
+
+  return results;
+};
+
+/**
+ * Checks if a URL is in a list (domains or patterns)
+ */
+export const isUrlInList = (
+  url: string,
+  domains: string[],
+  patterns: string[]
+): boolean => {
+  const domain = getDomainFromUrl(url);
+
+  // Check domain list first (faster lookup)
+  if (domains.includes(domain)) {
+    return true;
+  }
+
+  // Check patterns
+  return patterns.some((pattern) => urlMatchesPattern(url, pattern));
+};
+
+/**
+ * Mode-aware filter logic
+ * Determines if grayscale should be applied based on mode and lists
+ */
+export const shouldApplyFilter = (
+  url: string,
+  settings: {
+    mode: "blacklist" | "whitelist";
+    blacklist: string[];
+    urlPatternBlacklist: string[];
+    whitelist: string[];
+    urlPatternWhitelist: string[];
+  }
+): boolean => {
+  if (settings.mode === "blacklist") {
+    // Blacklist mode: Apply filter UNLESS URL is in blacklist
+    const isBlacklisted = isUrlInList(
+      url,
+      settings.blacklist,
+      settings.urlPatternBlacklist
+    );
+    return !isBlacklisted;
+  } else {
+    // Whitelist mode: Apply filter ONLY if URL is in whitelist
+    const isWhitelisted = isUrlInList(
+      url,
+      settings.whitelist,
+      settings.urlPatternWhitelist
+    );
+    return isWhitelisted;
+  }
+};

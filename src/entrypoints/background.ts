@@ -1,6 +1,6 @@
 import { isMediaOnlyPage } from "@/utils/MediaCheckUtil";
 import { settings } from "@/utils/storage";
-import { shouldExcludeUrl, getDomainFromUrl } from "@/utils/urlUtils";
+import { shouldApplyFilter, getDomainFromUrl, isUrlInList } from "@/utils/urlUtils";
 
 export default defineBackground(() => {
   let settingsInitialized = false;
@@ -43,38 +43,44 @@ export default defineBackground(() => {
     );
   };
 
-  // Function to determine if grayscale should be applied
+  // Function to determine if grayscale should be applied (mode-aware)
   const shouldApplyGrayscale = (
     url: string,
     isMediaOnly: boolean,
     settings: any
   ): boolean => {
-    const isExcluded = shouldExcludeUrl(
-      url,
-      settings.blacklist,
-      settings.urlBlacklist || []
-    );
+    const shouldApply = shouldApplyFilter(url, {
+      mode: settings.mode || 'blacklist',
+      blacklist: settings.blacklist || [],
+      urlPatternBlacklist: settings.urlPatternBlacklist || [],
+      whitelist: settings.whitelist || [],
+      urlPatternWhitelist: settings.urlPatternWhitelist || [],
+    });
 
     return (
       settings.enabled &&
       url &&
-      !isExcluded &&
+      shouldApply &&
       !(isMediaOnly && settings.imageExceptionEnabled)
     );
   };
 
-  // Debounced version of applyGreyscale
+  // Debounced version of applyGreyscale (mode-aware)
   const applyGreyscaleToAllTabsDebounced = debounce(
-    (
-      intensity: number = 100,
-      blacklist: string[] = [],
-      urlPatternBlacklist: string[] = [],
-      imageExceptionEnabled: boolean = false
-    ) => {
+    (currentSettings: any) => {
+      const intensity = currentSettings.intensity || 100;
+      const imageExceptionEnabled = currentSettings.mediaExceptionEnabled || false;
+      
       browser.tabs.query({}).then((tabs) => {
         const tabsToUpdate = tabs.filter((tab) => {
           if (!tab.id || !tab.url) return false;
-          return !shouldExcludeUrl(tab.url, blacklist, urlPatternBlacklist); // Updated
+          return shouldApplyFilter(tab.url, {
+            mode: currentSettings.mode || 'blacklist',
+            blacklist: currentSettings.blacklist || [],
+            urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+            whitelist: currentSettings.whitelist || [],
+            urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+          });
         });
 
         // Batch process tabs that need updating
@@ -95,7 +101,7 @@ export default defineBackground(() => {
                   if (
                     !shouldApplyGrayscale(domain, isMediaOnly, {
                       enabled: true,
-                      blacklist,
+                      ...currentSettings,
                       imageExceptionEnabled,
                     })
                   ) {
@@ -148,7 +154,15 @@ export default defineBackground(() => {
                 .catch(() => {
                   // If image detection fails, apply greyscale normally
                   const domain = getHostname(tab.url || "");
-                  if (!blacklist.includes(domain)) {
+                  const shouldApply = shouldApplyFilter(tab.url || "", {
+                    mode: currentSettings.mode || 'blacklist',
+                    blacklist: currentSettings.blacklist || [],
+                    urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+                    whitelist: currentSettings.whitelist || [],
+                    urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+                  });
+                  
+                  if (shouldApply) {
                     browser.scripting
                       .executeScript({
                         target: { tabId: tab.id! },
@@ -277,11 +291,7 @@ export default defineBackground(() => {
       });
 
       if (currentSettings.enabled) {
-        applyGreyscaleToAllTabsDebounced(
-          currentSettings.intensity,
-          currentSettings.blacklist,
-          currentSettings.mediaExceptionEnabled
-        );
+        applyGreyscaleToAllTabsDebounced(currentSettings);
       }
       updateBadge(currentSettings.enabled, false);
     } catch (error) {
@@ -360,11 +370,7 @@ export default defineBackground(() => {
       if (currentSettings.enabled && !currentSettings.temporaryDisable) {
         updateBadge(currentSettings.enabled);
 
-        applyGreyscaleToAllTabsDebounced(
-          currentSettings.intensity,
-          currentSettings.blacklist,
-          currentSettings.mediaExceptionEnabled
-        );
+        applyGreyscaleToAllTabsDebounced(currentSettings);
       }
       settingsInitialized = true;
       updateScheduleAlarm();
@@ -383,11 +389,7 @@ export default defineBackground(() => {
       );
 
       if (newSettings?.enabled) {
-        applyGreyscaleToAllTabsDebounced(
-          newSettings.intensity,
-          newSettings.blacklist,
-          newSettings.mediaExceptionEnabled
-        );
+        applyGreyscaleToAllTabsDebounced(newSettings);
       } else {
         disableGreyscaleForAllTabs();
       }
@@ -397,23 +399,27 @@ export default defineBackground(() => {
       newSettings?.intensity !== oldSettings?.intensity &&
       newSettings?.enabled
     ) {
-      applyGreyscaleToAllTabsDebounced(
-        newSettings.intensity,
-        newSettings.blacklist,
-        newSettings.mediaExceptionEnabled
-      );
+      applyGreyscaleToAllTabsDebounced(newSettings);
     }
 
+    // Check for blacklist or whitelist changes
     if (
-      JSON.stringify(newSettings?.blacklist) !==
-        JSON.stringify(oldSettings?.blacklist) &&
+      (JSON.stringify(newSettings?.blacklist) !==
+        JSON.stringify(oldSettings?.blacklist) ||
+      JSON.stringify(newSettings?.whitelist) !==
+        JSON.stringify(oldSettings?.whitelist) ||
+      JSON.stringify(newSettings?.urlPatternBlacklist) !==
+        JSON.stringify(oldSettings?.urlPatternBlacklist) ||
+      JSON.stringify(newSettings?.urlPatternWhitelist) !==
+        JSON.stringify(oldSettings?.urlPatternWhitelist)) &&
       newSettings?.enabled
     ) {
-      applyGreyscaleToAllTabsDebounced(
-        newSettings.intensity,
-        newSettings.blacklist,
-        newSettings.mediaExceptionEnabled
-      );
+      applyGreyscaleToAllTabsDebounced(newSettings);
+    }
+
+    // Check for mode changes
+    if (newSettings?.mode !== oldSettings?.mode && newSettings?.enabled) {
+      applyGreyscaleToAllTabsDebounced(newSettings);
     }
 
     if (
@@ -421,11 +427,7 @@ export default defineBackground(() => {
         oldSettings?.mediaExceptionEnabled &&
       newSettings?.enabled
     ) {
-      applyGreyscaleToAllTabsDebounced(
-        newSettings.intensity,
-        newSettings.blacklist,
-        newSettings.mediaExceptionEnabled
-      );
+      applyGreyscaleToAllTabsDebounced(newSettings);
     }
 
     if (newSettings?.temporaryDisable !== oldSettings?.temporaryDisable) {
@@ -561,10 +563,28 @@ export default defineBackground(() => {
           blacklist: message.value,
         });
         break;
-      case "setUrlPatternBlacklist": // Updated case name
+      case "setUrlPatternBlacklist":
         await settings.setValue({
           ...currentSettings,
           urlPatternBlacklist: message.value,
+        });
+        break;
+      case "setWhitelist":
+        await settings.setValue({
+          ...currentSettings,
+          whitelist: message.value,
+        });
+        break;
+      case "setUrlPatternWhitelist":
+        await settings.setValue({
+          ...currentSettings,
+          urlPatternWhitelist: message.value,
+        });
+        break;
+      case "setMode":
+        await settings.setValue({
+          ...currentSettings,
+          mode: message.value,
         });
         break;
       case "toggleMediaException":
@@ -622,33 +642,66 @@ export default defineBackground(() => {
             if (currentTab?.url) {
               const currentUrl = currentTab.url;
               const domain = getDomainFromUrl(currentUrl);
+              const mode = currentSettings.mode || 'blacklist';
 
-              // Check if current URL is excluded (domain or pattern)
-              const isExcluded = shouldExcludeUrl(
-                currentUrl,
-                currentSettings.blacklist,
-                currentSettings.urlPatternBlacklist || [] // Updated
-              );
-              if (isExcluded) {
-                // Remove from both lists if present
-                const updatedBlacklist = currentSettings.blacklist.filter(
-                  (site) => site !== domain
-                );
-                const updatedUrlPatternBlacklist = (
+              if (mode === 'blacklist') {
+                // Blacklist mode: toggle in blacklist
+                const isInBlacklist = isUrlInList(
+                  currentUrl,
+                  currentSettings.blacklist,
                   currentSettings.urlPatternBlacklist || []
-                ).filter((pattern) => !urlMatchesPattern(currentUrl, pattern));
+                );
+                
+                if (isInBlacklist) {
+                  // Remove from blacklist
+                  const updatedBlacklist = currentSettings.blacklist.filter(
+                    (site) => site !== domain
+                  );
+                  const updatedUrlPatternBlacklist = (
+                    currentSettings.urlPatternBlacklist || []
+                  ).filter((pattern) => !isUrlInList(currentUrl, [], [pattern]));
 
-                settings.setValue({
-                  ...currentSettings,
-                  blacklist: updatedBlacklist,
-                  urlPatternBlacklist: updatedUrlPatternBlacklist, // Updated
-                });
+                  settings.setValue({
+                    ...currentSettings,
+                    blacklist: updatedBlacklist,
+                    urlPatternBlacklist: updatedUrlPatternBlacklist,
+                  });
+                } else {
+                  // Add domain to blacklist
+                  settings.setValue({
+                    ...currentSettings,
+                    blacklist: [...currentSettings.blacklist, domain],
+                  });
+                }
               } else {
-                // Add domain (default behavior)
-                settings.setValue({
-                  ...currentSettings,
-                  blacklist: [...currentSettings.blacklist, domain],
-                });
+                // Whitelist mode: toggle in whitelist
+                const isInWhitelist = isUrlInList(
+                  currentUrl,
+                  currentSettings.whitelist || [],
+                  currentSettings.urlPatternWhitelist || []
+                );
+                
+                if (isInWhitelist) {
+                  // Remove from whitelist
+                  const updatedWhitelist = (currentSettings.whitelist || []).filter(
+                    (site) => site !== domain
+                  );
+                  const updatedUrlPatternWhitelist = (
+                    currentSettings.urlPatternWhitelist || []
+                  ).filter((pattern) => !isUrlInList(currentUrl, [], [pattern]));
+
+                  settings.setValue({
+                    ...currentSettings,
+                    whitelist: updatedWhitelist,
+                    urlPatternWhitelist: updatedUrlPatternWhitelist,
+                  });
+                } else {
+                  // Add domain to whitelist
+                  settings.setValue({
+                    ...currentSettings,
+                    whitelist: [...(currentSettings.whitelist || []), domain],
+                  });
+                }
               }
             }
           });
@@ -673,14 +726,21 @@ export default defineBackground(() => {
     }
   });
 
-  // Listen for tab updates to apply greyscale to new tabs
+  // Listen for tab updates to apply greyscale to new tabs (mode-aware)
   browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     const currentSettings = await settings.getValue();
     if (changeInfo.status === "complete" && currentSettings.enabled) {
       browser.tabs.get(tabId).then((tab) => {
         if (tab.url) {
-          const domain = getHostname(tab.url);
-          if (domain && !currentSettings.blacklist.includes(domain)) {
+          const shouldApply = shouldApplyFilter(tab.url, {
+            mode: currentSettings.mode || 'blacklist',
+            blacklist: currentSettings.blacklist || [],
+            urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+            whitelist: currentSettings.whitelist || [],
+            urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+          });
+          
+          if (shouldApply) {
             // Check if it's a media-only page first
             browser.scripting
               .executeScript({
