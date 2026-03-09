@@ -56,23 +56,29 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
 
   return (
     <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          <Shield size={18} className="text-neutral-700" />
-          <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-1.5">
-            Site Filter
-            <InfoTooltip content={modeDesc[mode]} />
-          </h2>
+          <div className="text-neutral-700">
+            <Shield size={18} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-sm text-neutral-800 flex items-center gap-1.5">
+              Site Filter
+              <InfoTooltip content={modeDesc[mode]} />
+            </h2>
+            <p className="text-xs text-neutral-500 italic">
+              {modeDesc[mode]}
+            </p>
+          </div>
         </div>
         <ShortcutBadge shortcut={shortcut} />
       </div>
 
       {/* Segmented Mode Toggle */}
-      <div className="flex bg-neutral-200/70 rounded-lg p-0.5 mb-2">
+      <div className="flex bg-neutral-200/70 rounded-lg p-0.5 mb-3">
         <button
           onClick={() => onModeChange("blacklist")}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+          className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
             mode === "blacklist"
               ? "bg-white text-neutral-900 shadow-sm"
               : "text-neutral-500 hover:text-neutral-700"
@@ -87,7 +93,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
         </button>
         <button
           onClick={() => onModeChange("whitelist")}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${
+          className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
             mode === "whitelist"
               ? "bg-white text-neutral-900 shadow-sm"
               : "text-neutral-500 hover:text-neutral-700"
@@ -101,12 +107,11 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
           )}
         </button>
       </div>
-      <p className="text-xs text-neutral-500 mb-3">{modeDesc[mode]}</p>
 
-      {/* Current Site - One-click actions */}
+      {/* Current Site */}
       <div className="bg-white rounded-lg border border-neutral-200 p-2.5">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-neutral-100 rounded-full overflow-hidden flex-shrink-0">
+          <div className="w-3.5 h-3.5 bg-neutral-200 rounded-full overflow-hidden flex-shrink-0">
             {currentUrl && (
               <img
                 src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
@@ -134,7 +139,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
                   else if (matchingPattern)
                     onRemoveSite(matchingPattern, "pattern");
                 }}
-                className="text-xs px-2.5 py-1 bg-neutral-100 text-neutral-600 rounded-md hover:bg-neutral-200 transition-colors"
+                className="text-xs px-2.5 py-1 bg-neutral-100 text-neutral-600 rounded-lg hover:bg-neutral-200 hover:border-neutral-400 transition-colors"
               >
                 Remove
               </button>
@@ -142,7 +147,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
               <>
                 <button
                   onClick={onAddCurrentSite}
-                  className="text-xs px-2.5 py-1 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 transition-colors"
+                  className="text-xs px-2.5 py-1 bg-neutral-900 text-neutral-50 rounded-lg hover:bg-neutral-800 active:bg-neutral-950 transition-colors"
                   title={`${actionLabel} entire domain`}
                 >
                   <Globe size={10} className="inline mr-1" />
@@ -150,7 +155,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
                 </button>
                 <button
                   onClick={onAddCurrentUrl}
-                  className="text-xs p-1 text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 rounded-md transition-colors"
+                  className="text-xs p-1 text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
                   title="Add as URL pattern"
                 >
                   <Link size={12} />

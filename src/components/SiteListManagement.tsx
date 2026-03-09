@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ArrowLeft,
   Search,
@@ -8,16 +8,13 @@ import {
   ShieldCheck,
   Link,
   Globe,
-  Plus,
   Image,
 } from "lucide-react";
 import Footer from "./Footer";
 import InfoTooltip from "./InfoTooltip";
 import {
   getUnifiedExclusions,
-  suggestUrlPattern,
   isValidUrlPattern,
-  urlMatchesPattern,
   parseSitesFromText,
 } from "@/utils/urlUtils";
 
@@ -74,9 +71,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
 }) => {
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [activeTab, setActiveTab] = useState<ListTab>(mode);
-  const [addInput, setAddInput] = useState("");
-  const [showAddInput, setShowAddInput] = useState(false);
-  const [bulkText, setBulkText] = useState("");
+  const [addText, setAddText] = useState("");
 
   const blacklistExclusions = useMemo(
     () => getUnifiedExclusions(blacklist, urlPatternBlacklist),
@@ -115,8 +110,8 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
     return { all: d + p, domains: d, patterns: p };
   }, [currentExclusions]);
 
-  const handleImport = () => {
-    const parsed = parseSitesFromText(bulkText);
+  const handleAdd = () => {
+    const parsed = parseSitesFromText(addText);
     const valid = parsed.filter((s) => s.valid);
     const domains = valid
       .filter((s) => s.type === "domain")
@@ -126,25 +121,11 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
       .map((s) => s.value);
     if (domains.length > 0) onBulkImport(domains, "domain", activeTab);
     if (patterns.length > 0) onBulkImport(patterns, "pattern", activeTab);
-    setBulkText("");
+    setAddText("");
   };
 
-  const handleAddCustom = () => {
-    const value = addInput.trim();
-    if (!value) return;
-
-    const isPattern = value.includes("*");
-    if (isPattern && isValidUrlPattern(value)) {
-      onBulkImport([value], "pattern", activeTab);
-    } else if (!isPattern && value.includes(".")) {
-      onBulkImport([value], "domain", activeTab);
-    }
-    setAddInput("");
-    setShowAddInput(false);
-  };
-
-  const parsedBulk = useMemo(() => parseSitesFromText(bulkText), [bulkText]);
-  const validBulkCount = parsedBulk.filter((s) => s.valid).length;
+  const parsedEntries = useMemo(() => parseSitesFromText(addText), [addText]);
+  const validCount = parsedEntries.filter((s) => s.valid).length;
 
   const filterOptions: { type: FilterType; label: string; count: number }[] = [
     { type: "all", label: "All", count: counts.all },
@@ -158,18 +139,18 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
       <div className="flex items-center gap-3 mb-4">
         <button
           onClick={onReturnToMain}
-          className="p-1.5 rounded-lg hover:bg-neutral-100 transition-colors"
+          className="p-1 rounded-full hover:bg-neutral-100 flex items-center justify-center transition-colors"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={20} />
         </button>
-        <h1 className="text-base font-bold text-neutral-800">Manage Sites</h1>
+        <h1 className="text-lg font-bold text-neutral-800">Manage Sites</h1>
       </div>
 
       {/* Segmented Tabs */}
       <div className="flex bg-neutral-100 rounded-lg p-0.5 mb-4">
         <button
           onClick={() => setActiveTab("blacklist")}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
             activeTab === "blacklist"
               ? "bg-white text-neutral-900 shadow-sm"
               : "text-neutral-500 hover:text-neutral-700"
@@ -186,7 +167,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
         </button>
         <button
           onClick={() => setActiveTab("whitelist")}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-medium transition-all ${
             activeTab === "whitelist"
               ? "bg-white text-neutral-900 shadow-sm"
               : "text-neutral-500 hover:text-neutral-700"
@@ -203,35 +184,35 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
         </button>
       </div>
 
-      {/* Current site quick-add (only if not already in list and viewing active mode's tab) */}
+      {/* Current site quick-add */}
       {currentUrl && !isCurrentUrlInActiveList && activeTab === mode && (
-        <div className="flex items-center gap-2 p-2.5 mb-3 bg-neutral-50 border border-neutral-200 rounded-lg">
-          <div className="w-4 h-4 bg-neutral-200 rounded-full overflow-hidden flex-shrink-0">
-            {currentUrl && (
+        <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-3 hover:border-neutral-400 transition-all mb-4">
+          <div className="flex items-center gap-2">
+            <div className="w-3.5 h-3.5 bg-neutral-200 rounded-full overflow-hidden flex-shrink-0">
               <img
                 src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
                 alt=""
                 className="w-full h-full object-cover"
               />
-            )}
+            </div>
+            <span className="text-xs text-neutral-600 truncate flex-1">
+              {currentUrl}
+            </span>
+            <button
+              onClick={onAddCurrentSite}
+              className="text-xs px-2.5 py-1.5 bg-neutral-900 text-neutral-50 rounded-lg hover:bg-neutral-800 active:bg-neutral-950 transition-colors"
+            >
+              <Globe size={10} className="inline mr-1" />
+              Add
+            </button>
+            <button
+              onClick={onAddCurrentUrl}
+              className="text-xs p-1.5 text-neutral-400 hover:text-neutral-800 hover:bg-neutral-200 rounded-lg transition-colors"
+              title="Add as URL pattern"
+            >
+              <Link size={12} />
+            </button>
           </div>
-          <span className="text-xs text-neutral-600 truncate flex-1">
-            {currentUrl}
-          </span>
-          <button
-            onClick={onAddCurrentSite}
-            className="text-xs px-2 py-1 bg-neutral-900 text-white rounded-md hover:bg-neutral-800 transition-colors"
-          >
-            <Globe size={10} className="inline mr-1" />
-            Add
-          </button>
-          <button
-            onClick={onAddCurrentUrl}
-            className="text-xs p-1 text-neutral-400 hover:text-neutral-700 hover:bg-neutral-100 rounded-md transition-colors"
-            title="Add as URL pattern"
-          >
-            <Link size={12} />
-          </button>
         </div>
       )}
 
@@ -244,7 +225,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
           />
           <input
             type="text"
-            className="w-full pl-8 pr-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs focus:outline-none focus:border-neutral-400 transition-colors"
+            className="w-full pl-8 pr-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs hover:border-neutral-400 focus:outline-none focus:border-neutral-400 transition-all"
             placeholder="Search..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
@@ -255,7 +236,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
             <button
               key={type}
               onClick={() => setActiveFilter(type)}
-              className={`px-2 py-1.5 text-xs rounded-md transition-all ${
+              className={`px-2 py-1.5 text-xs rounded-lg transition-all ${
                 activeFilter === type
                   ? "bg-white text-neutral-900 shadow-sm"
                   : "text-neutral-400 hover:text-neutral-600"
@@ -271,14 +252,14 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
       </div>
 
       {/* Site List */}
-      <div className="flex-1 overflow-y-auto bg-white rounded-lg border border-neutral-200 mb-3 min-h-[180px]">
+      <div className="flex-1 overflow-y-auto bg-white rounded-lg border border-neutral-200 mb-4 min-h-[180px]">
         {filteredExclusions.length > 0 ? (
           filteredExclusions.map((ex) => (
             <div
               key={`${ex.type}-${ex.value}`}
               className="flex items-center gap-2.5 py-2 px-3 border-b border-neutral-100 last:border-0 hover:bg-neutral-50 transition-colors group"
             >
-              <div className="w-3.5 h-3.5 bg-neutral-100 rounded-full overflow-hidden flex-shrink-0">
+              <div className="w-3.5 h-3.5 bg-neutral-200 rounded-full overflow-hidden flex-shrink-0">
                 <img
                   src={ex.favicon}
                   alt=""
@@ -360,103 +341,82 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
         )}
       </div>
 
-      {/* Add Sites Section */}
-      <div className="bg-neutral-50 border border-neutral-200 rounded-lg p-3 mb-3">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-medium text-neutral-700">
-            Add sites to {activeTab}
-          </span>
-          {!showAddInput && (
-            <button
-              onClick={() => setShowAddInput(true)}
-              className="text-xs text-neutral-500 hover:text-neutral-700 flex items-center gap-1 transition-colors"
-            >
-              <Plus size={10} />
-              Single
-            </button>
-          )}
+      {/* Add Sites */}
+      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all mb-4">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="text-neutral-700">
+            <Globe size={18} />
+          </div>
+          <div>
+            <h2 className="font-semibold text-sm text-neutral-800">
+              Add Sites
+            </h2>
+            <p className="text-xs text-neutral-500 italic">
+              Enter domains or patterns, press Enter to add
+            </p>
+          </div>
         </div>
 
-        {/* Single add input */}
-        {showAddInput && (
-          <div className="flex gap-2 mb-2">
-            <input
-              type="text"
-              value={addInput}
-              onChange={(e) => setAddInput(e.target.value)}
-              placeholder="domain.com or pattern.com/path/*"
-              className="flex-1 px-2.5 py-1.5 text-xs bg-white border border-neutral-200 rounded-md focus:outline-none focus:border-neutral-400"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") handleAddCustom();
-                if (e.key === "Escape") {
-                  setShowAddInput(false);
-                  setAddInput("");
-                }
-              }}
-              autoFocus
-            />
-            <button
-              onClick={handleAddCustom}
-              disabled={!addInput.trim()}
-              className="px-2.5 py-1.5 text-xs bg-neutral-900 text-white rounded-md hover:bg-neutral-800 disabled:opacity-50 transition-colors"
-            >
-              Add
-            </button>
-            <button
-              onClick={() => {
-                setShowAddInput(false);
-                setAddInput("");
-              }}
-              className="p-1.5 text-neutral-400 hover:text-neutral-600 transition-colors"
-            >
-              <X size={12} />
-            </button>
-          </div>
-        )}
-
-        {/* Bulk textarea */}
         <textarea
-          value={bulkText}
-          onChange={(e) => setBulkText(e.target.value)}
-          placeholder={`Paste domains or patterns separated by commas or new lines\ne.g. youtube.com, reddit.com/r/*`}
-          className="w-full h-16 px-2.5 py-2 text-xs bg-white border border-neutral-200 rounded-md focus:outline-none focus:border-neutral-400 resize-none"
+          value={addText}
+          onChange={(e) => setAddText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              handleAdd();
+            }
+          }}
+          placeholder={`youtube.com, reddit.com/r/*\nComma or newline separated`}
+          className="w-full h-16 px-3 py-2 text-xs bg-white rounded-lg border border-neutral-200 hover:border-neutral-400 focus:outline-none focus:border-neutral-400 transition-all resize-none"
         />
-        {bulkText.trim() && (
+        {addText.trim() && (
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-neutral-500">
-              {validBulkCount} valid site{validBulkCount !== 1 ? "s" : ""}{" "}
-              detected
+              {validCount} valid site{validCount !== 1 ? "s" : ""} detected
             </span>
             <button
-              onClick={handleImport}
-              disabled={validBulkCount === 0}
-              className="px-3 py-1.5 text-xs bg-neutral-900 text-white rounded-md hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+              onClick={handleAdd}
+              disabled={validCount === 0}
+              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                validCount > 0
+                  ? "bg-neutral-900 text-neutral-50 hover:bg-neutral-800 active:bg-neutral-950"
+                  : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+              }`}
             >
-              Import
+              Add to {activeTab}
             </button>
           </div>
         )}
       </div>
 
       {/* Media Exception */}
-      <div className="flex items-center justify-between py-2.5 px-3 bg-neutral-50 border border-neutral-200 rounded-lg mb-4">
-        <div className="flex items-center gap-2">
-          <Image size={14} className="text-neutral-500" />
-          <span className="text-xs text-neutral-600">
-            Skip media-only pages
-          </span>
-          <InfoTooltip content="Pages with only images or videos won't be affected" />
+      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="text-neutral-700">
+              <Image size={18} />
+            </div>
+            <div>
+              <h2 className="font-semibold text-sm text-neutral-800 flex items-center gap-1.5">
+                Skip Media Pages
+                <InfoTooltip content="Pages with only images or videos won't be affected by grayscale" />
+              </h2>
+              <p className="text-xs text-neutral-500 italic">
+                Exclude media-only pages
+              </p>
+            </div>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              className="sr-only peer"
+              checked={mediaExceptionEnabled}
+              onChange={onToggleMediaException}
+            />
+            <div className="w-9 h-5 bg-neutral-200 rounded-full peer-checked:bg-neutral-900 transition-colors"></div>
+            <div className="absolute top-0.5 left-0.5 bg-white border border-neutral-300 rounded-full h-4 w-4 transition-transform peer-checked:translate-x-4"></div>
+          </label>
         </div>
-        <label className="relative inline-flex items-center cursor-pointer">
-          <input
-            type="checkbox"
-            className="sr-only peer"
-            checked={mediaExceptionEnabled}
-            onChange={onToggleMediaException}
-          />
-          <div className="w-9 h-5 bg-neutral-200 rounded-full peer-checked:bg-neutral-900 transition-colors"></div>
-          <div className="absolute top-0.5 left-0.5 bg-white border border-neutral-300 rounded-full h-4 w-4 transition-transform peer-checked:translate-x-4"></div>
-        </label>
       </div>
 
       <Footer />
