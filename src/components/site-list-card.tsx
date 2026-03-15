@@ -1,10 +1,10 @@
 import { ChevronRight, Globe, Link, Shield } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import ShortcutBadge from "@/components/ShortcutBadge";
+import ShortcutBadge from "@/components/shortcut-badge";
 import { getShortcutByName } from "@/utils/shortcuts";
-import { urlMatchesPattern } from "@/utils/urlUtils";
-import InfoTooltip from "./InfoTooltip";
+import { urlMatchesPattern } from "@/utils/url-utils";
+import InfoTooltip from "./info-tooltip";
 
 interface SiteListCardProps {
   blacklist: string[];
@@ -82,6 +82,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
               : "text-neutral-500 hover:text-neutral-700"
           }`}
           onClick={() => onModeChange("blacklist")}
+          type="button"
         >
           Blacklist
           {blacklist.length + urlPatternBlacklist.length > 0 && (
@@ -99,6 +100,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
               : "text-neutral-500 hover:text-neutral-700"
           }`}
           onClick={() => onModeChange("whitelist")}
+          type="button"
         >
           Whitelist
           {whitelist.length + urlPatternWhitelist.length > 0 && (
@@ -119,7 +121,9 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
               <img
                 alt=""
                 className="h-full w-full object-cover"
+                height={14}
                 src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
+                width={14}
               />
             )}
           </div>
@@ -145,6 +149,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
                     onRemoveSite(matchingPattern, "pattern");
                   }
                 }}
+                type="button"
               >
                 Remove
               </button>
@@ -154,6 +159,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
                   className="rounded-lg bg-neutral-900 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-neutral-800 active:bg-neutral-950"
                   onClick={onAddCurrentSite}
                   title={`${actionLabel} entire domain`}
+                  type="button"
                 >
                   <Globe className="mr-1 inline" size={10} />
                   {actionLabel}
@@ -162,6 +168,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
                   className="rounded-lg p-1 text-neutral-400 text-xs transition-colors hover:bg-neutral-100 hover:text-neutral-800"
                   onClick={onAddCurrentUrl}
                   title="Add as URL pattern"
+                  type="button"
                 >
                   <Link size={12} />
                 </button>
@@ -175,6 +182,7 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
       <button
         className="mt-3 flex w-full items-center justify-between rounded-lg bg-neutral-900 px-3 py-2 text-neutral-50 text-xs transition-colors hover:bg-neutral-800 active:bg-neutral-950"
         onClick={onManageAllSites}
+        type="button"
       >
         <span>Manage{totalSites > 0 ? ` ${totalSites}` : ""} sites</span>
         <ChevronRight size={12} />

@@ -17,13 +17,15 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({
 
   return (
     <div className="relative inline-block">
-      <div
+      <button
+        aria-label="More information"
         className={`cursor-help transition-colors ${className}`}
         onMouseEnter={() => setIsVisible(true)}
         onMouseLeave={() => setIsVisible(false)}
+        type="button"
       >
         <Info size={size} />
-      </div>
+      </button>
 
       {isVisible && (
         <div className="absolute bottom-full left-1/2 z-50 mb-1 max-w-[200px] -translate-x-1/2 transform whitespace-normal rounded bg-neutral-800 px-2 py-1.5 text-white text-xs shadow-lg">

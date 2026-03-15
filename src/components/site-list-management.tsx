@@ -11,9 +11,9 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { getUnifiedExclusions, parseSitesFromText } from "@/utils/urlUtils";
-import Footer from "./Footer";
-import InfoTooltip from "./InfoTooltip";
+import { getUnifiedExclusions, parseSitesFromText } from "@/utils/url-utils";
+import Footer from "./footer";
+import InfoTooltip from "./info-tooltip";
 
 interface SiteListManagementProps {
   blacklist: string[];
@@ -51,7 +51,6 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
   mode,
   searchTerm,
   currentUrl,
-  currentFullUrl,
   blacklist,
   urlPatternBlacklist,
   whitelist,
@@ -142,6 +141,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
         <button
           className="flex items-center justify-center rounded-full p-1 transition-colors hover:bg-neutral-100"
           onClick={onReturnToMain}
+          type="button"
         >
           <ArrowLeft size={20} />
         </button>
@@ -157,6 +157,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
               : "text-neutral-500 hover:text-neutral-700"
           }`}
           onClick={() => setActiveTab("blacklist")}
+          type="button"
         >
           <Shield size={12} />
           Blacklist ({blacklistExclusions.length})
@@ -174,6 +175,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
               : "text-neutral-500 hover:text-neutral-700"
           }`}
           onClick={() => setActiveTab("whitelist")}
+          type="button"
         >
           <ShieldCheck size={12} />
           Whitelist ({whitelistExclusions.length})
@@ -194,7 +196,9 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
               <img
                 alt=""
                 className="h-full w-full object-cover"
+                height={14}
                 src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
+                width={14}
               />
             </div>
             <span className="flex-1 truncate text-neutral-600 text-xs">
@@ -203,6 +207,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
             <button
               className="rounded-lg bg-neutral-900 px-2.5 py-1.5 text-neutral-50 text-xs transition-colors hover:bg-neutral-800 active:bg-neutral-950"
               onClick={onAddCurrentSite}
+              type="button"
             >
               <Globe className="mr-1 inline" size={10} />
               Add
@@ -211,6 +216,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
               className="rounded-lg p-1.5 text-neutral-400 text-xs transition-colors hover:bg-neutral-200 hover:text-neutral-800"
               onClick={onAddCurrentUrl}
               title="Add as URL pattern"
+              type="button"
             >
               <Link size={12} />
             </button>
@@ -243,6 +249,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
               }`}
               key={type}
               onClick={() => setActiveFilter(type)}
+              type="button"
             >
               {label}
               {count > 0 && <span className="ml-0.5 opacity-60">{count}</span>}
@@ -263,7 +270,9 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
                 <img
                   alt=""
                   className="h-full w-full object-cover"
+                  height={14}
                   src={ex.favicon}
+                  width={14}
                 />
               </div>
               <div className="min-w-0 flex-1">
@@ -295,6 +304,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
                 className="text-neutral-300 opacity-0 transition-colors hover:text-red-500 group-hover:opacity-100"
                 onClick={() => onRemoveSite(ex.value, ex.type, activeTab)}
                 title="Remove"
+                type="button"
               >
                 <X size={14} />
               </button>
@@ -379,6 +389,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
               }`}
               disabled={validCount === 0}
               onClick={handleAdd}
+              type="button"
             >
               Add to {activeTab}
             </button>

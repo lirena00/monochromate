@@ -10,8 +10,8 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { settings } from "#imports";
-import Header from "@/components/Header";
-import { Discord } from "@/components/Icons/Discord";
+import Header from "@/components/header";
+import { Discord } from "@/components/icons/discord";
 
 export default function BackupPage() {
   const [importStatus, setImportStatus] = useState<
@@ -174,6 +174,7 @@ export default function BackupPage() {
                 <button
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm transition-colors hover:bg-neutral-200"
                   onClick={handleExport}
+                  type="button"
                 >
                   <Download size={15} />
                   Export
@@ -181,6 +182,7 @@ export default function BackupPage() {
                 <button
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm transition-colors hover:bg-neutral-200"
                   onClick={handleImport}
+                  type="button"
                 >
                   <Upload size={15} />
                   Import
@@ -236,9 +238,10 @@ export default function BackupPage() {
               </span>
             </a>
 
-            <div
+            <button
               className="group flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 transition-all hover:border-neutral-400 hover:bg-neutral-50"
               onClick={() => handleStarClick(5)}
+              type="button"
             >
               <div className="flex gap-0.5">
                 {[1, 2, 3, 4, 5].map((star) => (
@@ -259,7 +262,7 @@ export default function BackupPage() {
               <span className="text-neutral-600 text-sm group-hover:text-neutral-800">
                 Rate Us
               </span>
-            </div>
+            </button>
           </div>
 
           <div className="mt-4 text-center">

@@ -1,52 +1,54 @@
-type MonofilterTypes_v1 = {
-  enabled: boolean;
-  intensity: number;
-  blacklist: string[];
-  scheduleStart: string;
-  scheduleEnd: string;
-  schedule: boolean;
-};
+import { storage } from "#imports";
 
-type MonofilterTypes_v2 = {
+interface MonofilterTypes_v1 {
+  blacklist: string[];
   enabled: boolean;
   intensity: number;
-  blacklist: string[];
-  scheduleStart: string;
-  scheduleEnd: string;
   schedule: boolean;
+  scheduleEnd: string;
+  scheduleStart: string;
+}
+
+interface MonofilterTypes_v2 {
+  blacklist: string[];
+  enabled: boolean;
+  intensity: number;
+  mediaExceptionEnabled: boolean;
+  schedule: boolean;
+  scheduleEnd: string;
+  scheduleStart: string;
   temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
-  mediaExceptionEnabled: boolean;
-};
+}
 
-type MonofilterTypes_v3 = {
+interface MonofilterTypes_v3 {
+  blacklist: string[];
   enabled: boolean;
   intensity: number;
-  blacklist: string[];
-  urlPatternBlacklist: string[];
-  scheduleStart: string;
-  scheduleEnd: string;
+  mediaExceptionEnabled: boolean;
   schedule: boolean;
+  scheduleEnd: string;
+  scheduleStart: string;
   temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
-  mediaExceptionEnabled: boolean;
-};
+  urlPatternBlacklist: string[];
+}
 
-type MonofilterTypes = {
+interface MonofilterTypes {
+  blacklist: string[];
   enabled: boolean;
   intensity: number;
-  blacklist: string[];
-  urlPatternBlacklist: string[];
-  whitelist: string[];
-  urlPatternWhitelist: string[];
+  mediaExceptionEnabled: boolean;
   mode: "blacklist" | "whitelist";
-  scheduleStart: string;
-  scheduleEnd: string;
   schedule: boolean;
+  scheduleEnd: string;
+  scheduleStart: string;
   temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
-  mediaExceptionEnabled: boolean;
-};
+  urlPatternBlacklist: string[];
+  urlPatternWhitelist: string[];
+  whitelist: string[];
+}
 
 export const settings = storage.defineItem<MonofilterTypes>(
   "local:Monofilter",

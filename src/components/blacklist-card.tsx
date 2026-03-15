@@ -1,9 +1,9 @@
 import { ChevronDown, Globe, Link, Shield } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import ShortcutBadge from "@/components/ShortcutBadge";
+import ShortcutBadge from "@/components/shortcut-badge";
 import { getShortcutByName } from "@/utils/shortcuts";
-import { urlMatchesPattern } from "@/utils/urlUtils";
+import { urlMatchesPattern } from "@/utils/url-utils";
 
 interface BlacklistCardProps {
   blacklist: string[];
@@ -70,7 +70,9 @@ const BlacklistCard: React.FC<BlacklistCardProps> = ({
                 <img
                   alt=""
                   className="h-full w-full object-cover"
+                  height={14}
                   src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
+                  width={14}
                 />
               )}
             </div>
@@ -101,6 +103,7 @@ const BlacklistCard: React.FC<BlacklistCardProps> = ({
                     onRemoveSite(matchingPattern, "pattern");
                   }
                 }}
+                type="button"
               >
                 Remove
               </button>
@@ -109,6 +112,7 @@ const BlacklistCard: React.FC<BlacklistCardProps> = ({
                 <button
                   className="flex items-center gap-1 rounded bg-neutral-900 px-2 py-1 text-white text-xs transition-colors hover:bg-neutral-800"
                   onClick={() => setShowUrlOption(!showUrlOption)}
+                  type="button"
                 >
                   Exclude
                   <ChevronDown
@@ -128,6 +132,7 @@ const BlacklistCard: React.FC<BlacklistCardProps> = ({
                           onAddCurrentSite();
                           setShowUrlOption(false);
                         }}
+                        type="button"
                       >
                         <Globe className="text-neutral-600" size={12} />
                         <div className="text-left">
@@ -144,6 +149,7 @@ const BlacklistCard: React.FC<BlacklistCardProps> = ({
                           onAddCurrentUrl();
                           setShowUrlOption(false);
                         }}
+                        type="button"
                       >
                         <Link className="text-neutral-600" size={12} />
                         <div className="text-left">
@@ -165,6 +171,7 @@ const BlacklistCard: React.FC<BlacklistCardProps> = ({
       <button
         className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-neutral-900 py-2 text-neutral-50 text-xs transition-colors hover:bg-neutral-800 active:bg-neutral-950"
         onClick={onManageAllSites}
+        type="button"
       >
         Manage all excluded sites
       </button>

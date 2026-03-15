@@ -4,7 +4,7 @@ import {
   ChevronRight,
   ChevronUp,
 } from "lucide-react";
-import React from "react";
+import type React from "react";
 import { parseShortcut } from "@/utils/shortcuts";
 
 interface ShortcutBadgeProps {
@@ -64,14 +64,13 @@ const ShortcutBadge: React.FC<ShortcutBadgeProps> = ({
 
   return (
     <div className="flex items-center gap-0.5">
-      {keys.map((key, index) => (
-        <React.Fragment key={index}>
-          <span
-            className={`${sizeClasses[size]} flex items-center justify-center rounded border border-neutral-300 bg-neutral-200 font-mono text-neutral-600`}
-          >
-            {getKeyContent(key)}
-          </span>
-        </React.Fragment>
+      {keys.map((key) => (
+        <span
+          className={`${sizeClasses[size]} flex items-center justify-center rounded border border-neutral-300 bg-neutral-200 font-mono text-neutral-600`}
+          key={key}
+        >
+          {getKeyContent(key)}
+        </span>
       ))}
     </div>
   );

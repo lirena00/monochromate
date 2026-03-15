@@ -1,7 +1,7 @@
 import { Github, Heart, Keyboard, Star } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
-import { Discord } from "@/components/Icons/Discord";
+import { Discord } from "@/components/icons/discord";
 import { openShortcutsSettings } from "@/utils/shortcuts";
 
 const Footer: React.FC = () => {
@@ -89,6 +89,7 @@ const Footer: React.FC = () => {
           <button
             className="group flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-neutral-200 bg-white p-2 transition-all hover:border-neutral-400 hover:bg-neutral-50"
             onClick={openShortcutsSettings}
+            type="button"
           >
             <span className="text-neutral-700 transition-transform group-hover:scale-110">
               <Keyboard size={16} />
@@ -100,9 +101,10 @@ const Footer: React.FC = () => {
         </div>
 
         <div className="mt-1.5">
-          <div
-            className="group flex cursor-pointer flex-col items-center gap-1 rounded-lg border border-neutral-200 bg-white p-2 transition-all hover:border-neutral-400 hover:bg-neutral-50"
+          <button
+            className="group flex w-full cursor-pointer flex-col items-center gap-1 rounded-lg border border-neutral-200 bg-white p-2 transition-all hover:border-neutral-400 hover:bg-neutral-50"
             onClick={() => handleStarClick(5)}
+            type="button"
           >
             <div className="flex gap-0.5">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -126,7 +128,7 @@ const Footer: React.FC = () => {
             <span className="text-neutral-600 text-xs group-hover:text-neutral-800">
               Rate Us
             </span>
-          </div>
+          </button>
         </div>
 
         <div className="mt-2 border-neutral-200 border-t pt-2 text-center">

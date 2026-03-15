@@ -1,22 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import "./App.css";
+import "./app.css";
 import { Loader2 } from "lucide-react";
-import Backup from "@/components/BackupCard";
-import Footer from "@/components/Footer";
-import Header from "@/components/Header";
-import IntensityCard from "@/components/IntensityCard";
-import ScheduleCard from "@/components/ScheduleCard";
-import SiteListCard from "@/components/SiteListCard";
-import SiteListManagement from "@/components/SiteListManagement";
-import SupportBanner from "@/components/SupportBanner";
-import TemporaryDisableCard from "@/components/TemporaryDisableCard";
-import GreyscaleToggleCard from "@/components/ToggleCard";
-import WarningCard from "@/components/WarningCard";
+import Backup from "@/components/backup-card";
+import Footer from "@/components/footer";
+import Header from "@/components/header";
+import IntensityCard from "@/components/intensity-card";
+import ScheduleCard from "@/components/schedule-card";
+import SiteListCard from "@/components/site-list-card";
+import SiteListManagement from "@/components/site-list-management";
+import SupportBanner from "@/components/support-banner";
+import TemporaryDisableCard from "@/components/temporary-disable-card";
+import GreyscaleToggleCard from "@/components/toggle-card";
+import WarningCard from "@/components/warning-card";
 import {
   getDomainFromUrl,
   isUrlInList,
   suggestUrlPattern,
-} from "@/utils/urlUtils";
+} from "@/utils/url-utils";
 
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -235,7 +235,7 @@ export default function App() {
     [mode, loading]
   );
 
-  const addCurrentSite = useCallback(async () => {
+  const addCurrentSite = useCallback(() => {
     if (loading || !currentUrl || isCurrentUrlInActiveList) {
       return;
     }
@@ -262,7 +262,7 @@ export default function App() {
     isCurrentUrlInActiveList,
   ]);
 
-  const addCurrentUrl = useCallback(async () => {
+  const addCurrentUrl = useCallback(() => {
     if (loading || !currentFullUrl || isCurrentUrlInActiveList) {
       return;
     }
@@ -392,13 +392,9 @@ export default function App() {
     setSearchTerm("");
   }, []);
 
-  return (
-    <div className="flex min-h-[800px] w-[420px] flex-col bg-white p-6 text-neutral-800">
-      {loading ? (
-        <div className="flex flex-1 items-center justify-center">
-          <Loader2 className="animate-spin" size={24} />
-        </div>
-      ) : view === "main" ? (
+  const renderContent = () => {
+    if (view === "main") {
+      return (
         <>
           <Header />
 
@@ -452,27 +448,41 @@ export default function App() {
 
           <Footer />
         </>
+      );
+    }
+
+    return (
+      <SiteListManagement
+        blacklist={blacklist}
+        currentFullUrl={currentFullUrl}
+        currentUrl={currentUrl}
+        filteredBlacklist={filteredBlacklist}
+        isCurrentUrlInActiveList={isCurrentUrlInActiveList}
+        mediaExceptionEnabled={mediaExceptionEnabled}
+        mode={mode}
+        onAddCurrentSite={addCurrentSite}
+        onAddCurrentUrl={addCurrentUrl}
+        onBulkImport={handleBulkImport}
+        onRemoveSite={removeSite}
+        onReturnToMain={handleReturnToMain}
+        onSearchChange={setSearchTerm}
+        onToggleMediaException={toggleMediaException}
+        searchTerm={searchTerm}
+        urlPatternBlacklist={urlPatternBlacklist}
+        urlPatternWhitelist={urlPatternWhitelist}
+        whitelist={whitelist}
+      />
+    );
+  };
+
+  return (
+    <div className="flex min-h-[800px] w-[420px] flex-col bg-white p-6 text-neutral-800">
+      {loading ? (
+        <div className="flex flex-1 items-center justify-center">
+          <Loader2 className="animate-spin" size={24} />
+        </div>
       ) : (
-        <SiteListManagement
-          blacklist={blacklist}
-          currentFullUrl={currentFullUrl}
-          currentUrl={currentUrl}
-          filteredBlacklist={filteredBlacklist}
-          isCurrentUrlInActiveList={isCurrentUrlInActiveList}
-          mediaExceptionEnabled={mediaExceptionEnabled}
-          mode={mode}
-          onAddCurrentSite={addCurrentSite}
-          onAddCurrentUrl={addCurrentUrl}
-          onBulkImport={handleBulkImport}
-          onRemoveSite={removeSite}
-          onReturnToMain={handleReturnToMain}
-          onSearchChange={setSearchTerm}
-          onToggleMediaException={toggleMediaException}
-          searchTerm={searchTerm}
-          urlPatternBlacklist={urlPatternBlacklist}
-          urlPatternWhitelist={urlPatternWhitelist}
-          whitelist={whitelist}
-        />
+        renderContent()
       )}
     </div>
   );

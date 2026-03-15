@@ -10,16 +10,16 @@ import {
 } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import ShortcutBadge from "@/components/ShortcutBadge";
+import ShortcutBadge from "@/components/shortcut-badge";
 import { getShortcutByName } from "@/utils/shortcuts";
 import {
   getUnifiedExclusions,
   isValidUrlPattern,
   suggestUrlPattern,
   urlMatchesPattern,
-} from "@/utils/urlUtils";
-import Footer from "./Footer";
-import InfoTooltip from "./InfoTooltip";
+} from "@/utils/url-utils";
+import Footer from "./footer";
+import InfoTooltip from "./info-tooltip";
 
 interface BlacklistManagementProps {
   blacklist: string[];
@@ -39,6 +39,155 @@ interface BlacklistManagementProps {
 }
 
 type FilterType = "all" | "domains" | "patterns";
+
+interface FilterButtonProps {
+  activeFilter: FilterType;
+  count: number;
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  type: FilterType;
+}
+
+const FilterButton: React.FC<FilterButtonProps> = ({
+  type,
+  label,
+  icon,
+  count,
+  activeFilter,
+  onClick,
+}) => (
+  <button
+    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+      activeFilter === type
+        ? "bg-neutral-900 text-white"
+        : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
+    }`}
+    onClick={onClick}
+    type="button"
+  >
+    {icon}
+    <span>{label}</span>
+    {count > 0 && (
+      <span
+        className={`rounded-full px-1 py-0.5 text-xs ${
+          activeFilter === type
+            ? "bg-white/20 text-white"
+            : "bg-neutral-100 text-neutral-500"
+        }`}
+      >
+        {count}
+      </span>
+    )}
+  </button>
+);
+
+/**
+ * Returns the appropriate icon for a given filter type
+ */
+const getFilterIcon = (filter: FilterType): React.ReactNode => {
+  if (filter === "domains") {
+    return <Globe size={16} />;
+  }
+  if (filter === "patterns") {
+    return <Link size={16} />;
+  }
+  return <Filter size={16} />;
+};
+
+/**
+ * Returns the display label for a given filter type
+ */
+const getFilterLabel = (filter: FilterType): string => {
+  if (filter === "all") {
+    return "exclusions";
+  }
+  return filter;
+};
+
+interface ExcludeDropdownProps {
+  currentFullUrl: string;
+  currentUrl: string;
+  onAddCurrentSite: () => void;
+  onAddCurrentUrl: () => void;
+  onShowPatternInput: () => void;
+  showUrlOption: boolean;
+  toggleUrlOption: () => void;
+}
+
+const ExcludeDropdown: React.FC<ExcludeDropdownProps> = ({
+  currentUrl,
+  currentFullUrl,
+  showUrlOption,
+  toggleUrlOption,
+  onAddCurrentSite,
+  onAddCurrentUrl,
+  onShowPatternInput,
+}) => (
+  <div className="relative">
+    <button
+      className="flex items-center gap-1 rounded bg-neutral-900 px-2 py-1 text-white text-xs transition-colors hover:bg-neutral-800"
+      onClick={toggleUrlOption}
+      type="button"
+    >
+      Exclude
+      <X
+        className={`transition-transform ${
+          showUrlOption ? "rotate-45" : "rotate-0"
+        }`}
+        size={10}
+      />
+    </button>
+
+    {showUrlOption && (
+      <div className="absolute top-full right-0 z-50 mt-1 min-w-[180px] rounded-lg border border-neutral-200 bg-white text-xs shadow-lg">
+        <div className="p-1.5">
+          <button
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
+            onClick={onAddCurrentSite}
+            type="button"
+          >
+            <Globe className="text-neutral-600" size={12} />
+            <div className="text-left">
+              <div className="font-medium">Entire domain</div>
+              <div className="truncate text-neutral-500 text-xs">
+                All pages on {currentUrl}
+              </div>
+            </div>
+          </button>
+
+          <button
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
+            onClick={onAddCurrentUrl}
+            type="button"
+          >
+            <Link className="text-neutral-600" size={12} />
+            <div className="text-left">
+              <div className="font-medium">Smart pattern</div>
+              <div className="truncate text-neutral-500 text-xs">
+                {suggestUrlPattern(currentFullUrl).substring(0, 20)}...
+              </div>
+            </div>
+          </button>
+
+          <button
+            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
+            onClick={onShowPatternInput}
+            type="button"
+          >
+            <Filter className="text-neutral-600" size={12} />
+            <div className="text-left">
+              <div className="font-medium">Custom pattern</div>
+              <div className="text-neutral-500 text-xs">
+                Define your own rule
+              </div>
+            </div>
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+);
 
 const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
   searchTerm,
@@ -131,42 +280,13 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
     setCustomPattern("");
   };
 
-  const FilterButton: React.FC<{
-    type: FilterType;
-    label: string;
-    icon: React.ReactNode;
-    count: number;
-  }> = ({ type, label, icon, count }) => (
-    <button
-      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
-        activeFilter === type
-          ? "bg-neutral-900 text-white"
-          : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
-      }`}
-      onClick={() => setActiveFilter(type)}
-    >
-      {icon}
-      <span>{label}</span>
-      {count > 0 && (
-        <span
-          className={`rounded-full px-1 py-0.5 text-xs ${
-            activeFilter === type
-              ? "bg-white/20 text-white"
-              : "bg-neutral-100 text-neutral-500"
-          }`}
-        >
-          {count}
-        </span>
-      )}
-    </button>
-  );
-
   return (
     <div className="flex min-h-[800px] flex-col overflow-hidden">
       <div className="mb-4 flex items-center gap-3">
         <button
           className="flex items-center justify-center rounded-full p-1 transition-colors hover:bg-neutral-100"
           onClick={onReturnToMain}
+          type="button"
         >
           <ArrowLeft size={20} />
         </button>
@@ -201,7 +321,9 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                   <img
                     alt=""
                     className="h-full w-full object-cover"
+                    height={14}
                     src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
+                    width={14}
                   />
                 )}
               </div>
@@ -227,82 +349,29 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                       onRemoveSite(matchingPattern, "pattern");
                     }
                   }}
+                  type="button"
                 >
                   Remove
                 </button>
               ) : (
-                <div className="relative">
-                  <button
-                    className="flex items-center gap-1 rounded bg-neutral-900 px-2 py-1 text-white text-xs transition-colors hover:bg-neutral-800"
-                    onClick={() => setShowUrlOption(!showUrlOption)}
-                  >
-                    Exclude
-                    <X
-                      className={`transition-transform ${
-                        showUrlOption ? "rotate-45" : "rotate-0"
-                      }`}
-                      size={10}
-                    />
-                  </button>
-
-                  {showUrlOption && (
-                    <div className="absolute top-full right-0 z-50 mt-1 min-w-[180px] rounded-lg border border-neutral-200 bg-white text-xs shadow-lg">
-                      <div className="p-1.5">
-                        <button
-                          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
-                          onClick={() => {
-                            onAddCurrentSite();
-                            setShowUrlOption(false);
-                          }}
-                        >
-                          <Globe className="text-neutral-600" size={12} />
-                          <div className="text-left">
-                            <div className="font-medium">Entire domain</div>
-                            <div className="truncate text-neutral-500 text-xs">
-                              All pages on {currentUrl}
-                            </div>
-                          </div>
-                        </button>
-
-                        <button
-                          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
-                          onClick={() => {
-                            onAddCurrentUrl();
-                            setShowUrlOption(false);
-                          }}
-                        >
-                          <Link className="text-neutral-600" size={12} />
-                          <div className="text-left">
-                            <div className="font-medium">Smart pattern</div>
-                            <div className="truncate text-neutral-500 text-xs">
-                              {suggestUrlPattern(currentFullUrl).substring(
-                                0,
-                                20
-                              )}
-                              ...
-                            </div>
-                          </div>
-                        </button>
-
-                        <button
-                          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
-                          onClick={() => {
-                            setShowPatternInput(true);
-                            setShowUrlOption(false);
-                          }}
-                        >
-                          <Filter className="text-neutral-600" size={12} />
-                          <div className="text-left">
-                            <div className="font-medium">Custom pattern</div>
-                            <div className="text-neutral-500 text-xs">
-                              Define your own rule
-                            </div>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <ExcludeDropdown
+                  currentFullUrl={currentFullUrl}
+                  currentUrl={currentUrl}
+                  onAddCurrentSite={() => {
+                    onAddCurrentSite();
+                    setShowUrlOption(false);
+                  }}
+                  onAddCurrentUrl={() => {
+                    onAddCurrentUrl();
+                    setShowUrlOption(false);
+                  }}
+                  onShowPatternInput={() => {
+                    setShowPatternInput(true);
+                    setShowUrlOption(false);
+                  }}
+                  showUrlOption={showUrlOption}
+                  toggleUrlOption={() => setShowUrlOption(!showUrlOption)}
+                />
               )}
             </div>
           </div>
@@ -337,12 +406,14 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                     !(customPattern.trim() && isValidUrlPattern(customPattern))
                   }
                   onClick={handleAddCustomPattern}
+                  type="button"
                 >
                   Add
                 </button>
                 <button
                   className="rounded border border-neutral-200 px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
                   onClick={() => setShowPatternInput(false)}
+                  type="button"
                 >
                   Cancel
                 </button>
@@ -404,21 +475,27 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
         {/* Filter Tabs */}
         <div className="mb-3 flex gap-1.5">
           <FilterButton
+            activeFilter={activeFilter}
             count={filterCounts.all}
             icon={<Filter size={12} />}
             label="All"
+            onClick={() => setActiveFilter("all")}
             type="all"
           />
           <FilterButton
+            activeFilter={activeFilter}
             count={filterCounts.domains}
             icon={<Globe size={12} />}
             label="Domains"
+            onClick={() => setActiveFilter("domains")}
             type="domains"
           />
           <FilterButton
+            activeFilter={activeFilter}
             count={filterCounts.patterns}
             icon={<Link size={12} />}
             label="Patterns"
+            onClick={() => setActiveFilter("patterns")}
             type="patterns"
           />
         </div>
@@ -453,7 +530,9 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                     <img
                       alt=""
                       className="h-full w-full object-cover"
+                      height={14}
                       src={exclusion.favicon}
+                      width={14}
                     />
                   </div>
 
@@ -490,6 +569,7 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                   className="ml-2 flex-shrink-0 text-neutral-500 transition-colors hover:text-red-500"
                   onClick={() => onRemoveSite(exclusion.value, exclusion.type)}
                   title={`Remove ${exclusion.type} exclusion`}
+                  type="button"
                 >
                   <X size={12} />
                 </button>
@@ -503,29 +583,22 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                     <AlertCircle size={16} />
                   </div>
                   <p className="text-neutral-500 text-xs">
-                    No {activeFilter === "all" ? "exclusions" : activeFilter}{" "}
-                    match "{searchTerm}"
+                    No {getFilterLabel(activeFilter)} match "{searchTerm}"
                   </p>
                 </>
               ) : (
                 <>
                   <div className="text-neutral-400">
-                    {activeFilter === "all" ? (
-                      <Filter size={16} />
-                    ) : activeFilter === "domains" ? (
-                      <Globe size={16} />
-                    ) : (
-                      <Link size={16} />
-                    )}
+                    {getFilterIcon(activeFilter)}
                   </div>
                   <p className="text-neutral-500 text-xs">
-                    No {activeFilter === "all" ? "exclusions" : activeFilter}{" "}
-                    yet
+                    No {getFilterLabel(activeFilter)} yet
                   </p>
                   {activeFilter !== "all" && (
                     <button
                       className="text-neutral-400 text-xs underline hover:text-neutral-600"
                       onClick={() => setActiveFilter("all")}
+                      type="button"
                     >
                       View all exclusions
                     </button>

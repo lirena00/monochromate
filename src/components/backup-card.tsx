@@ -160,6 +160,7 @@ export default function Backup() {
           <button
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs transition-colors hover:bg-neutral-200"
             onClick={handleExport}
+            type="button"
           >
             <Download size={12} />
             Export
@@ -167,6 +168,7 @@ export default function Backup() {
           <button
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 py-2 text-white text-xs transition-colors hover:bg-neutral-800"
             onClick={openBackupPage}
+            type="button"
           >
             <ExternalLink size={12} />
             Import
@@ -177,6 +179,7 @@ export default function Backup() {
           <button
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs transition-colors hover:bg-neutral-200"
             onClick={handleExport}
+            type="button"
           >
             <Download size={12} />
             Export
@@ -184,6 +187,7 @@ export default function Backup() {
           <button
             className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs transition-colors hover:bg-neutral-200"
             onClick={handleImport}
+            type="button"
           >
             <Upload size={12} />
             Import

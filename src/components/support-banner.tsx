@@ -35,7 +35,6 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
             storeUrl =
               "https://addons.mozilla.org/en-US/firefox/addon/monochromate/reviews/";
             break;
-            break;
           default:
             storeUrl =
               "https://chromewebstore.google.com/detail/monochromate-the-best-gre/hafcajcllbjnoolpfngclfmmgpikdhlm/reviews";
@@ -51,7 +50,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
     }, 8000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [messages.length]);
 
   const handleDismiss = async () => {
     setIsVisible(false);
@@ -123,6 +122,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
           <button
             className="rounded-lg bg-neutral-800 px-3 py-2 text-white text-xs transition-colors hover:bg-neutral-900"
             onClick={currentMsg.action}
+            type="button"
           >
             {currentMsg.cta}
           </button>
@@ -130,6 +130,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
             className="absolute top-0 right-0 rounded-tr-lg rounded-bl-lg bg-neutral-800 p-1 transition-colors hover:bg-neutral-900"
             onClick={handleDismiss}
             title="Dismiss for 3 days"
+            type="button"
           >
             <X className="text-white" size={10} />
           </button>

@@ -3,6 +3,12 @@
  * Supports wildcard patterns for flexible URL exclusions
  */
 
+// Top-level regex constants for performance
+const WWW_PREFIX_REGEX = /^www\./;
+const PROTOCOL_AND_WWW_REGEX = /^(https?:\/\/)?(www\.)?/;
+const PROTOCOL_REGEX = /^https?:\/\//;
+const COMMA_NEWLINE_SPLIT_REGEX = /[,\n]+/;
+
 export interface URLExclusion {
   displayName: string;
   favicon?: string;
@@ -17,7 +23,8 @@ export interface URLExclusion {
 export const normalizeUrl = (url: string): string => {
   try {
     const urlObj = new URL(url.startsWith("http") ? url : `https://${url}`);
-    let normalized = urlObj.hostname.replace(/^www\./, "") + urlObj.pathname;
+    let normalized =
+      urlObj.hostname.replace(WWW_PREFIX_REGEX, "") + urlObj.pathname;
 
     // Include search params if they exist
     if (urlObj.search) {
@@ -31,7 +38,7 @@ export const normalizeUrl = (url: string): string => {
 
     return normalized;
   } catch {
-    return url.replace(/^(https?:\/\/)?(www\.)?/, "");
+    return url.replace(PROTOCOL_AND_WWW_REGEX, "");
   }
 };
 
@@ -41,9 +48,9 @@ export const normalizeUrl = (url: string): string => {
 export const getDomainFromUrl = (url: string): string => {
   try {
     const urlObj = new URL(url.startsWith("http") ? url : `https://${url}`);
-    return urlObj.hostname.replace(/^www\./, "");
+    return urlObj.hostname.replace(WWW_PREFIX_REGEX, "");
   } catch {
-    return url.replace(/^(https?:\/\/)?(www\.)?/, "").split("/")[0];
+    return url.replace(PROTOCOL_AND_WWW_REGEX, "").split("/")[0];
   }
 };
 
@@ -129,7 +136,9 @@ export const getExclusionDisplayName = (
 
   // For patterns, show a clean version
   const maxLength = 45;
-  const displayValue = value.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  const displayValue = value
+    .replace(PROTOCOL_REGEX, "")
+    .replace(WWW_PREFIX_REGEX, "");
 
   if (displayValue.length <= maxLength) {
     return displayValue;
@@ -152,7 +161,7 @@ export const getExclusionDisplayName = (
 export const suggestUrlPattern = (currentUrl: string): string => {
   try {
     const urlObj = new URL(currentUrl);
-    const domain = urlObj.hostname.replace(/^www\./, "");
+    const domain = urlObj.hostname.replace(WWW_PREFIX_REGEX, "");
     const pathname = urlObj.pathname;
 
     // Common pattern suggestions based on URL structure
@@ -183,7 +192,7 @@ export const suggestUrlPattern = (currentUrl: string): string => {
     // Default: domain + path + wildcard
     return `${domain}${pathname}*`;
   } catch {
-    return currentUrl + "*";
+    return `${currentUrl}*`;
   }
 };
 
@@ -197,17 +206,17 @@ export const getUnifiedExclusions = (
   const exclusions: URLExclusion[] = [];
 
   // Add domain exclusions
-  domainBlacklist.forEach((domain) => {
+  for (const domain of domainBlacklist) {
     exclusions.push({
       type: "domain",
       value: domain,
       displayName: domain,
       favicon: `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
     });
-  });
+  }
 
   // Add URL pattern exclusions
-  urlPatternBlacklist.forEach((pattern) => {
+  for (const pattern of urlPatternBlacklist) {
     const domain = getDomainFromUrl(pattern);
     exclusions.push({
       type: "pattern",
@@ -215,7 +224,7 @@ export const getUnifiedExclusions = (
       displayName: getExclusionDisplayName(pattern, "pattern"),
       favicon: `https://www.google.com/s2/favicons?domain=${domain}&sz=64`,
     });
-  });
+  }
 
   return exclusions.sort((a, b) => {
     // Sort by domain first, then by type (domains before patterns)
@@ -279,7 +288,7 @@ export const parseSitesFromText = (text: string): ParsedSite[] => {
 
   // Split by comma, newline, or multiple spaces
   const entries = text
-    .split(/[,\n]+/)
+    .split(COMMA_NEWLINE_SPLIT_REGEX)
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
@@ -296,7 +305,7 @@ export const parseSitesFromText = (text: string): ParsedSite[] => {
 
     if (isPattern) {
       results.push({
-        value: entry.replace(/^(https?:\/\/)?(www\.)?/, ""),
+        value: entry.replace(PROTOCOL_AND_WWW_REGEX, ""),
         type: "pattern",
         valid: isValidUrlPattern(entry),
       });
@@ -304,7 +313,7 @@ export const parseSitesFromText = (text: string): ParsedSite[] => {
       // Try to extract domain
       try {
         const domain = getDomainFromUrl(entry);
-        if (domain && domain.includes(".")) {
+        if (domain?.includes(".")) {
           results.push({
             value: domain,
             type: "domain",
@@ -313,7 +322,7 @@ export const parseSitesFromText = (text: string): ParsedSite[] => {
         } else {
           // Might be a simple domain without protocol
           const cleanEntry = entry
-            .replace(/^(https?:\/\/)?(www\.)?/, "")
+            .replace(PROTOCOL_AND_WWW_REGEX, "")
             .split("/")[0];
           if (cleanEntry.includes(".")) {
             results.push({

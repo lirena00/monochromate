@@ -1,7 +1,7 @@
 import { Sliders } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import ShortcutBadge from "@/components/ShortcutBadge";
+import ShortcutBadge from "@/components/shortcut-badge";
 import { getShortcutByName } from "@/utils/shortcuts";
 
 interface IntensityCardProps {

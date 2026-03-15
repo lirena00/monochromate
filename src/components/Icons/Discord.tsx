@@ -2,7 +2,9 @@ import type { SVGProps } from "react";
 export function Discord(props: SVGProps<SVGSVGElement>) {
   return (
     <svg
+      aria-label="Discord"
       height="18"
+      role="img"
       viewBox="0 0 24 24"
       width="18"
       xmlns="http://www.w3.org/2000/svg"

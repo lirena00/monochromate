@@ -1,7 +1,7 @@
 import { Power } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
-import ShortcutBadge from "@/components/ShortcutBadge";
+import ShortcutBadge from "@/components/shortcut-badge";
 import { getShortcutByName } from "@/utils/shortcuts";
 
 interface ToggleCardProps {
@@ -22,11 +22,26 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
   }, []);
 
   const isDisabled = isTemporaryDisabled;
-  const buttonText = isTemporaryDisabled
-    ? "Disabled"
-    : enabled
-      ? "Active"
-      : "Inactive";
+
+  const getButtonText = () => {
+    if (isTemporaryDisabled) {
+      return "Disabled";
+    }
+    if (enabled) {
+      return "Active";
+    }
+    return "Inactive";
+  };
+
+  const getButtonClassName = () => {
+    if (isDisabled) {
+      return "cursor-not-allowed bg-neutral-200 text-neutral-400";
+    }
+    if (enabled) {
+      return "bg-neutral-900 text-neutral-50 hover:bg-neutral-800 active:bg-neutral-950";
+    }
+    return "border border-neutral-300 bg-neutral-100 text-neutral-700 hover:border-neutral-400 hover:bg-neutral-200";
+  };
 
   return (
     <div className="rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
@@ -47,13 +62,7 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
         </div>
         <div className="flex items-center gap-1.5">
           <button
-            className={`rounded-lg px-3 py-2 text-xs transition-colors ${
-              isDisabled
-                ? "cursor-not-allowed bg-neutral-200 text-neutral-400"
-                : enabled
-                  ? "bg-neutral-900 text-neutral-50 hover:bg-neutral-800 active:bg-neutral-950"
-                  : "border border-neutral-300 bg-neutral-100 text-neutral-700 hover:border-neutral-400 hover:bg-neutral-200"
-            }`}
+            className={`rounded-lg px-3 py-2 text-xs transition-colors ${getButtonClassName()}`}
             disabled={isDisabled}
             onClick={isDisabled ? undefined : onToggle}
             title={
@@ -61,8 +70,9 @@ const ToggleCard: React.FC<ToggleCardProps> = ({
                 ? "Cannot toggle while temporarily disabled"
                 : undefined
             }
+            type="button"
           >
-            {buttonText}
+            {getButtonText()}
           </button>
         </div>
       </div>

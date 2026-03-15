@@ -7,12 +7,20 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
   return (
     <div className="mb-6 flex items-center gap-1">
-      <img
-        alt="Monochromate Logo"
+      <button
+        aria-label="Monochromate Logo"
         className="h-8 w-8 cursor-pointer"
         onClick={onLogoClick}
-        src="/logo.png"
-      />
+        type="button"
+      >
+        <img
+          alt="Monochromate Logo"
+          className="h-full w-full"
+          height={32}
+          src="/logo.png"
+          width={32}
+        />
+      </button>
       <h1 className="font-bold text-2xl text-neutral-800">Monochromate</h1>
       <a
         className="ml-auto rounded-full border border-neutral-200 bg-neutral-100 px-2 py-1 text-neutral-600 text-xs"

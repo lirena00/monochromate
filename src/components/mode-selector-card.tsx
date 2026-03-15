@@ -1,6 +1,6 @@
 import { ShieldCheck, ShieldOff } from "lucide-react";
 import type React from "react";
-import InfoTooltip from "./InfoTooltip";
+import InfoTooltip from "./info-tooltip";
 
 interface ModeSelectorCardProps {
   blacklistCount: number;
@@ -54,6 +54,7 @@ const ModeSelectorCard: React.FC<ModeSelectorCardProps> = ({
               : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400"
           }`}
           onClick={() => onModeChange("blacklist")}
+          type="button"
         >
           <div className="flex items-center gap-1.5">
             <ShieldOff size={14} />
@@ -80,6 +81,7 @@ const ModeSelectorCard: React.FC<ModeSelectorCardProps> = ({
               : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400"
           }`}
           onClick={() => onModeChange("whitelist")}
+          type="button"
         >
           <div className="flex items-center gap-1.5">
             <ShieldCheck size={14} />

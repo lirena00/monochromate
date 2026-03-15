@@ -1,6 +1,9 @@
 import type { ContentScriptContext } from "#imports";
-import { clearMediaCheckCache, isMediaOnlyPage } from "@/utils/MediaCheckUtil";
-import { shouldExcludeUrl } from "@/utils/urlUtils";
+import {
+  clearMediaCheckCache,
+  isMediaOnlyPage,
+} from "@/utils/media-check-util";
+import { shouldExcludeUrl } from "@/utils/url-utils";
 
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
@@ -101,7 +104,10 @@ const removeFullscreenGreyscale = (element: Element) => {
 
 const getFullscreenElement = (): Element | null => {
   return (
-    document.fullscreenElement || (document as any).webkitFullscreenElement
+    document.fullscreenElement ||
+    (document as Document & { webkitFullscreenElement?: Element })
+      .webkitFullscreenElement ||
+    null
   );
 };
 
@@ -145,14 +151,15 @@ const handleFullscreenChange = () => {
     updateOverlay(false);
   } else if (wasFullscreen) {
     // Clean up any fullscreen grayscale
-    document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
+    const grayscaleElements = document.querySelectorAll('[style*="grayscale"]');
+    for (const element of grayscaleElements) {
       if (
         element instanceof HTMLElement &&
         element.style.filter.includes("grayscale")
       ) {
         removeFullscreenGreyscale(element);
       }
-    });
+    }
   }
 
   // Apply effect immediately without debounce for fullscreen changes
@@ -272,9 +279,9 @@ export default defineContentScript({
       }
     });
 
-    ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
+    for (const event of ["fullscreenchange", "webkitfullscreenchange"]) {
       document.addEventListener(event, handleFullscreenChange);
-    });
+    }
 
     // Clear cache on navigation
     const handleNavigation = () => {
@@ -286,9 +293,9 @@ export default defineContentScript({
     window.addEventListener("popstate", handleNavigation);
 
     ctx.onInvalidated(() => {
-      ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
+      for (const event of ["fullscreenchange", "webkitfullscreenchange"]) {
         document.removeEventListener(event, handleFullscreenChange);
-      });
+      }
 
       window.removeEventListener("load", initializeGrayscale);
       window.removeEventListener("beforeunload", handleNavigation);
@@ -302,14 +309,14 @@ export default defineContentScript({
         overlayElement.remove();
         overlayElement = null;
       }
-      document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
+      for (const element of document.querySelectorAll('[style*="grayscale"]')) {
         if (
           element instanceof HTMLElement &&
           element.style.filter.includes("grayscale")
         ) {
           removeFullscreenGreyscale(element);
         }
-      });
+      }
       unwatchSettings();
       clearMediaCheckCache();
     });
