@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from "react";
-import { Clock, X, Info, ChevronDown, Check } from "lucide-react";
+import { Check, ChevronDown, Clock, Info, X } from "lucide-react";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { settings } from "@/utils/storage";
 
 interface TemporaryDisableCardProps {
@@ -55,7 +56,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
     const loadState = async () => {
       try {
         const currentSettings = await settings.getValue();
-        const tempDisable = currentSettings.temporaryDisable || false;
+        const tempDisable = currentSettings.temporaryDisable;
         const tempUntil = currentSettings.temporaryDisableUntil || null;
 
         setIsTemporaryDisabled(tempDisable);
@@ -80,7 +81,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
     // Watch for storage changes
     const unwatchSettings = settings.watch((newSettings) => {
       if (newSettings) {
-        const tempDisable = newSettings.temporaryDisable || false;
+        const tempDisable = newSettings.temporaryDisable;
         const tempUntil = newSettings.temporaryDisableUntil || null;
 
         setIsTemporaryDisabled(tempDisable);
@@ -155,7 +156,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
   };
 
   const validateInput = (value: string, unit: "minutes" | "hours"): string => {
-    const num = parseFloat(value);
+    const num = Number.parseFloat(value);
     if (isNaN(num) || num <= 0) {
       return "Please enter a valid positive number";
     }
@@ -181,7 +182,7 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
       return;
     }
 
-    const value = parseFloat(customValue);
+    const value = Number.parseFloat(customValue);
     const minutes = timeUnit === "hours" ? Math.round(value * 60) : value;
 
     setInputError("");
@@ -203,11 +204,11 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
 
     if (hours > 0) {
       return `${hours}h ${minutes}m ${seconds}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${seconds}s`;
-    } else {
-      return `${seconds}s`;
     }
+    if (minutes > 0) {
+      return `${minutes}m ${seconds}s`;
+    }
+    return `${seconds}s`;
   };
 
   const getPlaceholder = () => {
@@ -223,17 +224,17 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
   };
 
   return (
-    <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="text-neutral-700">
             <Clock size={18} />
           </div>
           <div>
-            <h2 className="font-semibold text-sm text-neutral-800">
+            <h2 className="font-semibold text-neutral-800 text-sm">
               Temporary Disable
             </h2>
-            <p className="text-xs text-neutral-500 italic">
+            <p className="text-neutral-500 text-xs italic">
               Auto-enable after time expires
             </p>
           </div>
@@ -241,26 +242,26 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
       </div>
 
       {isTemporaryDisabled ? (
-        <div className="p-2 bg-neutral-50 border border-neutral-200 rounded-lg">
+        <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-2">
           <div className="flex items-center justify-between">
             <div>
-              <div className="flex items-center gap-1.5 mb-1">
+              <div className="mb-1 flex items-center gap-1.5">
                 <div className="text-neutral-600">
                   <Info size={10} />
                 </div>
-                <p className="text-xs font-medium text-neutral-800">
+                <p className="font-medium text-neutral-800 text-xs">
                   Filter temporarily disabled
                 </p>
               </div>
-              <p className="text-xs text-neutral-600 ml-3.5">
+              <p className="ml-3.5 text-neutral-600 text-xs">
                 {remainingTime > 0
                   ? `Auto-enabling in ${displayTime}`
                   : "Re-enabling now..."}
               </p>
             </div>
             <button
+              className="rounded-lg p-1 text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-800"
               onClick={cancelTemporaryDisable}
-              className="p-1 text-neutral-600 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
               title="Cancel and re-enable now"
             >
               <X size={12} />
@@ -268,18 +269,18 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
           </div>
         </div>
       ) : (
-        <div className={`space-y-2 ${!enabled ? "opacity-60" : ""}`}>
+        <div className={`space-y-2 ${enabled ? "" : "opacity-60"}`}>
           <div className="grid grid-cols-5 gap-1">
             {predefinedDurations.map((duration) => (
               <button
+                className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
+                  enabled
+                    ? "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400 hover:bg-neutral-50"
+                    : "cursor-not-allowed border-neutral-200 bg-neutral-200 text-neutral-400"
+                }`}
+                disabled={!enabled}
                 key={duration.value}
                 onClick={() => handleTemporaryDisable(duration.value)}
-                disabled={!enabled}
-                className={`px-2 py-1.5 text-xs rounded-lg transition-colors border ${
-                  enabled
-                    ? "bg-white text-neutral-700 border-neutral-200 hover:bg-neutral-50 hover:border-neutral-400"
-                    : "bg-neutral-200 text-neutral-400 border-neutral-200 cursor-not-allowed"
-                }`}
               >
                 {duration.label}
               </button>
@@ -288,11 +289,15 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
 
           <div className="space-y-1.5">
             <div className="flex gap-1.5">
-              <div className="flex-1 relative">
+              <div className="relative flex-1">
                 <input
-                  type="text"
+                  className={`w-full rounded-lg border bg-white px-3 py-2 text-xs transition-colors focus:outline-none ${
+                    inputError
+                      ? "border-red-500"
+                      : "border-neutral-200 hover:border-neutral-400 focus:border-neutral-500"
+                  } ${enabled ? "" : "cursor-not-allowed opacity-60"}`}
+                  disabled={!enabled}
                   inputMode="decimal"
-                  value={customValue}
                   onChange={(e) => handleInputChange(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
@@ -300,22 +305,18 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
                     }
                   }}
                   placeholder={getPlaceholder()}
-                  disabled={!enabled}
-                  className={`w-full bg-white rounded-lg border px-3 py-2 text-xs focus:outline-none transition-colors ${
-                    inputError
-                      ? "border-red-500"
-                      : "border-neutral-200 hover:border-neutral-400 focus:border-neutral-500"
-                  } ${!enabled ? "opacity-60 cursor-not-allowed" : ""}`}
+                  type="text"
+                  value={customValue}
                 />
               </div>
 
-              <div ref={selectRef} className="relative">
+              <div className="relative" ref={selectRef}>
                 <button
-                  onClick={() => enabled && setIsSelectOpen(!isSelectOpen)}
-                  disabled={!enabled}
-                  className={`flex items-center gap-1.5 px-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs hover:border-neutral-400 focus:outline-none focus:border-neutral-500 transition-colors min-w-[85px] ${
-                    !enabled ? "opacity-60 cursor-not-allowed" : ""
+                  className={`flex min-w-[85px] items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs transition-colors hover:border-neutral-400 focus:border-neutral-500 focus:outline-none ${
+                    enabled ? "" : "cursor-not-allowed opacity-60"
                   }`}
+                  disabled={!enabled}
+                  onClick={() => enabled && setIsSelectOpen(!isSelectOpen)}
                 >
                   <span className="capitalize">
                     {
@@ -325,29 +326,29 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
                     }
                   </span>
                   <ChevronDown
-                    size={10}
                     className={`transition-transform ${
                       isSelectOpen ? "rotate-180" : ""
                     }`}
+                    size={10}
                   />
                 </button>
 
                 {isSelectOpen && enabled && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-50">
+                  <div className="absolute top-full right-0 left-0 z-50 mt-1 rounded-lg border border-neutral-200 bg-white shadow-lg">
                     <div className="p-1">
                       {timeUnitOptions.map((option) => (
                         <button
+                          className="flex w-full cursor-pointer items-center justify-between rounded-md px-2 py-1.5 text-xs outline-none hover:bg-neutral-50"
                           key={option.value}
                           onClick={() =>
                             handleSelectOption(
                               option.value as "minutes" | "hours"
                             )
                           }
-                          className="flex items-center justify-between w-full px-2 py-1.5 text-xs cursor-pointer hover:bg-neutral-50 rounded-md outline-none"
                         >
                           <span>{option.label}</span>
                           {timeUnit === option.value && (
-                            <Check size={10} className="text-neutral-600" />
+                            <Check className="text-neutral-600" size={10} />
                           )}
                         </button>
                       ))}
@@ -357,21 +358,21 @@ const TemporaryDisableCard: React.FC<TemporaryDisableCardProps> = ({
               </div>
 
               <button
-                onClick={handleCustomDisable}
-                disabled={!enabled || !customValue}
-                className={`px-3 py-2 text-xs rounded-lg transition-colors whitespace-nowrap ${
+                className={`whitespace-nowrap rounded-lg px-3 py-2 text-xs transition-colors ${
                   enabled && customValue
                     ? "bg-neutral-900 text-white hover:bg-neutral-800"
-                    : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
+                    : "cursor-not-allowed bg-neutral-200 text-neutral-400"
                 }`}
+                disabled={!(enabled && customValue)}
+                onClick={handleCustomDisable}
               >
                 Set
               </button>
             </div>
 
-            {inputError && <p className="text-xs text-red-500">{inputError}</p>}
+            {inputError && <p className="text-red-500 text-xs">{inputError}</p>}
 
-            <p className="text-xs text-neutral-400">
+            <p className="text-neutral-400 text-xs">
               Maximum 6 hours •{" "}
               {timeUnit === "hours"
                 ? "Decimals allowed (e.g., 1.5)"

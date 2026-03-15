@@ -5,6 +5,7 @@
       "@/*": ["./src/*"]
     },
     "allowImportingTsExtensions": true,
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "strictNullChecks": true
   }
 }

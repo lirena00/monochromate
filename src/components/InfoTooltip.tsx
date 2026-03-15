@@ -1,10 +1,11 @@
-import React, { useState } from "react";
 import { Info } from "lucide-react";
+import type React from "react";
+import { useState } from "react";
 
 interface InfoTooltipProps {
+  className?: string;
   content: string;
   size?: number;
-  className?: string;
 }
 
 const InfoTooltip: React.FC<InfoTooltipProps> = ({
@@ -25,9 +26,9 @@ const InfoTooltip: React.FC<InfoTooltipProps> = ({
       </div>
 
       {isVisible && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-1 px-2 py-1.5 bg-neutral-800 text-white text-xs rounded shadow-lg z-50 max-w-[200px] whitespace-normal">
+        <div className="absolute bottom-full left-1/2 z-50 mb-1 max-w-[200px] -translate-x-1/2 transform whitespace-normal rounded bg-neutral-800 px-2 py-1.5 text-white text-xs shadow-lg">
           <div className="text-center leading-tight">{content}</div>
-          <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-2 border-transparent border-t-neutral-800"></div>
+          <div className="absolute top-full left-1/2 -translate-x-1/2 transform border-2 border-transparent border-t-neutral-800" />
         </div>
       )}
     </div>

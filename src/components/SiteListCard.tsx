@@ -1,24 +1,25 @@
-import React, { useState, useEffect } from "react";
-import { Shield, Link, Globe, ChevronRight } from "lucide-react";
-import { getShortcutByName } from "@/utils/shortcuts";
+import { ChevronRight, Globe, Link, Shield } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 import ShortcutBadge from "@/components/ShortcutBadge";
-import InfoTooltip from "./InfoTooltip";
+import { getShortcutByName } from "@/utils/shortcuts";
 import { urlMatchesPattern } from "@/utils/urlUtils";
+import InfoTooltip from "./InfoTooltip";
 
 interface SiteListCardProps {
-  mode: "blacklist" | "whitelist";
-  onModeChange: (mode: "blacklist" | "whitelist") => void;
-  currentUrl: string;
-  currentFullUrl: string;
   blacklist: string[];
-  urlPatternBlacklist: string[];
-  whitelist: string[];
-  urlPatternWhitelist: string[];
+  currentFullUrl: string;
+  currentUrl: string;
   isCurrentUrlInActiveList: boolean;
+  mode: "blacklist" | "whitelist";
   onAddCurrentSite: () => void;
   onAddCurrentUrl: () => void;
-  onRemoveSite: (site: string, type?: "domain" | "pattern") => void;
   onManageAllSites: () => void;
+  onModeChange: (mode: "blacklist" | "whitelist") => void;
+  onRemoveSite: (site: string, type?: "domain" | "pattern") => void;
+  urlPatternBlacklist: string[];
+  urlPatternWhitelist: string[];
+  whitelist: string[];
 }
 
 const SiteListCard: React.FC<SiteListCardProps> = ({
@@ -55,53 +56,55 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
   const actionLabel = mode === "blacklist" ? "Exclude" : "Include";
 
   return (
-    <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+      <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="text-neutral-700">
             <Shield size={18} />
           </div>
           <div>
-            <h2 className="font-semibold text-sm text-neutral-800 flex items-center gap-1.5">
+            <h2 className="flex items-center gap-1.5 font-semibold text-neutral-800 text-sm">
               Site Filter
               <InfoTooltip content={modeDesc[mode]} />
             </h2>
-            <p className="text-xs text-neutral-500 italic">
-              {modeDesc[mode]}
-            </p>
+            <p className="text-neutral-500 text-xs italic">{modeDesc[mode]}</p>
           </div>
         </div>
         <ShortcutBadge shortcut={shortcut} />
       </div>
 
       {/* Segmented Mode Toggle */}
-      <div className="flex bg-neutral-200/70 rounded-lg p-0.5 mb-3">
+      <div className="mb-3 flex rounded-lg bg-neutral-200/70 p-0.5">
         <button
-          onClick={() => onModeChange("blacklist")}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+          className={`flex-1 rounded-lg py-1.5 font-medium text-xs transition-all ${
             mode === "blacklist"
               ? "bg-white text-neutral-900 shadow-sm"
               : "text-neutral-500 hover:text-neutral-700"
           }`}
+          onClick={() => onModeChange("blacklist")}
         >
           Blacklist
           {blacklist.length + urlPatternBlacklist.length > 0 && (
-            <span className={`ml-1 ${mode === "blacklist" ? "text-neutral-500" : "text-neutral-400"}`}>
+            <span
+              className={`ml-1 ${mode === "blacklist" ? "text-neutral-500" : "text-neutral-400"}`}
+            >
               ({blacklist.length + urlPatternBlacklist.length})
             </span>
           )}
         </button>
         <button
-          onClick={() => onModeChange("whitelist")}
-          className={`flex-1 py-1.5 text-xs font-medium rounded-lg transition-all ${
+          className={`flex-1 rounded-lg py-1.5 font-medium text-xs transition-all ${
             mode === "whitelist"
               ? "bg-white text-neutral-900 shadow-sm"
               : "text-neutral-500 hover:text-neutral-700"
           }`}
+          onClick={() => onModeChange("whitelist")}
         >
           Whitelist
           {whitelist.length + urlPatternWhitelist.length > 0 && (
-            <span className={`ml-1 ${mode === "whitelist" ? "text-neutral-500" : "text-neutral-400"}`}>
+            <span
+              className={`ml-1 ${mode === "whitelist" ? "text-neutral-500" : "text-neutral-400"}`}
+            >
               ({whitelist.length + urlPatternWhitelist.length})
             </span>
           )}
@@ -109,24 +112,25 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
       </div>
 
       {/* Current Site */}
-      <div className="bg-white rounded-lg border border-neutral-200 p-2.5">
+      <div className="rounded-lg border border-neutral-200 bg-white p-2.5">
         <div className="flex items-center gap-2">
-          <div className="w-3.5 h-3.5 bg-neutral-200 rounded-full overflow-hidden flex-shrink-0">
+          <div className="h-3.5 w-3.5 flex-shrink-0 overflow-hidden rounded-full bg-neutral-200">
             {currentUrl && (
               <img
-                src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
                 alt=""
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
+                src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
               />
             )}
           </div>
-          <span className="text-xs font-medium truncate flex-1">
+          <span className="flex-1 truncate font-medium text-xs">
             {currentUrl}
           </span>
 
-          <div className="flex items-center gap-1.5 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-1.5">
             {isCurrentUrlInActiveList ? (
               <button
+                className="rounded-lg bg-neutral-100 px-2.5 py-1 text-neutral-600 text-xs transition-colors hover:border-neutral-400 hover:bg-neutral-200"
                 onClick={() => {
                   const isDomainInList = activeList.includes(currentUrl);
                   const matchingPattern = activePatternList.find((p) =>
@@ -135,27 +139,28 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
                       p
                     )
                   );
-                  if (isDomainInList) onRemoveSite(currentUrl, "domain");
-                  else if (matchingPattern)
+                  if (isDomainInList) {
+                    onRemoveSite(currentUrl, "domain");
+                  } else if (matchingPattern) {
                     onRemoveSite(matchingPattern, "pattern");
+                  }
                 }}
-                className="text-xs px-2.5 py-1 bg-neutral-100 text-neutral-600 rounded-lg hover:bg-neutral-200 hover:border-neutral-400 transition-colors"
               >
                 Remove
               </button>
             ) : (
               <>
                 <button
+                  className="rounded-lg bg-neutral-900 px-2.5 py-1 text-neutral-50 text-xs transition-colors hover:bg-neutral-800 active:bg-neutral-950"
                   onClick={onAddCurrentSite}
-                  className="text-xs px-2.5 py-1 bg-neutral-900 text-neutral-50 rounded-lg hover:bg-neutral-800 active:bg-neutral-950 transition-colors"
                   title={`${actionLabel} entire domain`}
                 >
-                  <Globe size={10} className="inline mr-1" />
+                  <Globe className="mr-1 inline" size={10} />
                   {actionLabel}
                 </button>
                 <button
+                  className="rounded-lg p-1 text-neutral-400 text-xs transition-colors hover:bg-neutral-100 hover:text-neutral-800"
                   onClick={onAddCurrentUrl}
-                  className="text-xs p-1 text-neutral-400 hover:text-neutral-800 hover:bg-neutral-100 rounded-lg transition-colors"
                   title="Add as URL pattern"
                 >
                   <Link size={12} />
@@ -168,8 +173,8 @@ const SiteListCard: React.FC<SiteListCardProps> = ({
 
       {/* Manage Sites */}
       <button
+        className="mt-3 flex w-full items-center justify-between rounded-lg bg-neutral-900 px-3 py-2 text-neutral-50 text-xs transition-colors hover:bg-neutral-800 active:bg-neutral-950"
         onClick={onManageAllSites}
-        className="mt-3 w-full flex items-center justify-between text-xs py-2 px-3 rounded-lg bg-neutral-900 text-neutral-50 hover:bg-neutral-800 active:bg-neutral-950 transition-colors"
       >
         <span>Manage{totalSites > 0 ? ` ${totalSites}` : ""} sites</span>
         <ChevronRight size={12} />

@@ -1,4 +1,4 @@
-import React from "react";
+import type React from "react";
 
 interface HeaderProps {
   onLogoClick?: () => void;
@@ -6,21 +6,21 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onLogoClick }) => {
   return (
-    <div className="flex items-center gap-1 mb-6">
+    <div className="mb-6 flex items-center gap-1">
       <img
-        src="/logo.png"
         alt="Monochromate Logo"
         className="h-8 w-8 cursor-pointer"
         onClick={onLogoClick}
+        src="/logo.png"
       />
-      <h1 className="text-2xl font-bold text-neutral-800">Monochromate</h1>
+      <h1 className="font-bold text-2xl text-neutral-800">Monochromate</h1>
       <a
-        target="_blank"
-        rel="noopener noreferrer"
+        className="ml-auto rounded-full border border-neutral-200 bg-neutral-100 px-2 py-1 text-neutral-600 text-xs"
         href={`https://monochromate.lirena.in/release-notes/#v${
           browser.runtime.getManifest().version
         }`}
-        className="text-xs px-2 py-1 bg-neutral-100 text-neutral-600 rounded-full border border-neutral-200 ml-auto"
+        rel="noopener noreferrer"
+        target="_blank"
       >
         v{browser.runtime.getManifest().version}
       </a>

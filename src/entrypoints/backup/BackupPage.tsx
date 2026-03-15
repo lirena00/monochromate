@@ -1,15 +1,15 @@
-import React, { useState } from "react";
-import { settings } from "#imports";
 import {
-  Upload,
-  Download,
-  Info,
-  Heart,
-  Github,
-  Star,
   CheckCircle,
+  Download,
+  Github,
+  Heart,
+  Info,
+  Star,
+  Upload,
   XCircle,
 } from "lucide-react";
+import { useState } from "react";
+import { settings } from "#imports";
 import Header from "@/components/Header";
 import { Discord } from "@/components/Icons/Discord";
 
@@ -37,7 +37,7 @@ export default function BackupPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `monochromate-settings-backup.json`;
+        a.download = "monochromate-settings-backup.json";
         a.click();
         URL.revokeObjectURL(url);
       }
@@ -52,7 +52,9 @@ export default function BackupPage() {
     input.accept = ".json";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      if (!file) {
+        return;
+      }
 
       try {
         const text = await file.text();
@@ -100,20 +102,20 @@ export default function BackupPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="py-4 -mb-6 px-6 border-b border-neutral-200">
+    <div className="flex min-h-screen flex-col">
+      <div className="-mb-6 border-neutral-200 border-b px-6 py-4">
         <Header />
       </div>
 
       <div className="flex-1 bg-white">
-        <div className="max-w-[480px] mx-auto p-6 flex flex-col">
-          <h1 className="text-xl font-bold text-neutral-800 text-center mb-6">
+        <div className="mx-auto flex max-w-[480px] flex-col p-6">
+          <h1 className="mb-6 text-center font-bold text-neutral-800 text-xl">
             Backup & Restore
           </h1>
 
-          <div className="flex-1 flex items-center justify-center">
-            <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all w-full">
-              <div className="flex items-center gap-3 mb-3">
+          <div className="flex flex-1 items-center justify-center">
+            <div className="w-full rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+              <div className="mb-3 flex items-center gap-3">
                 <div className="text-neutral-700">
                   <Upload size={20} />
                 </div>
@@ -121,18 +123,18 @@ export default function BackupPage() {
                   <h2 className="font-semibold text-neutral-800">
                     Backup Settings
                   </h2>
-                  <p className="text-sm text-neutral-500 italic">
+                  <p className="text-neutral-500 text-sm italic">
                     Export or import your configuration
                   </p>
                 </div>
               </div>
 
-              <div className="p-2 bg-neutral-50 border border-neutral-200 rounded-lg mb-3">
+              <div className="mb-3 rounded-lg border border-neutral-200 bg-neutral-50 p-2">
                 <div className="flex items-center gap-2">
                   <div className="text-neutral-500">
                     <Info size={12} />
                   </div>
-                  <p className="text-xs text-neutral-600">
+                  <p className="text-neutral-600 text-xs">
                     This dedicated page is necessary for Firefox users because
                     the extension popup automatically closes when file selection
                     dialogs open, making it impossible to import settings
@@ -142,12 +144,12 @@ export default function BackupPage() {
               </div>
 
               {importStatus === "success" && (
-                <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-3">
+                <div className="mb-3 rounded-lg border border-green-200 bg-green-50 p-2">
                   <div className="flex items-center gap-2">
                     <div className="text-green-500">
                       <CheckCircle size={12} />
                     </div>
-                    <p className="text-xs text-green-700">
+                    <p className="text-green-700 text-xs">
                       Settings imported successfully! You can now close this
                       window.
                     </p>
@@ -156,12 +158,12 @@ export default function BackupPage() {
               )}
 
               {importStatus === "error" && (
-                <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-3">
+                <div className="mb-3 rounded-lg border border-red-200 bg-red-50 p-2">
                   <div className="flex items-center gap-2">
                     <div className="text-red-500">
                       <XCircle size={12} />
                     </div>
-                    <p className="text-xs text-red-700">
+                    <p className="text-red-700 text-xs">
                       Import failed. Please try again with a valid backup file.
                     </p>
                   </div>
@@ -170,15 +172,15 @@ export default function BackupPage() {
 
               <div className="flex gap-2">
                 <button
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm transition-colors hover:bg-neutral-200"
                   onClick={handleExport}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
                 >
                   <Download size={15} />
                   Export
                 </button>
                 <button
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm transition-colors hover:bg-neutral-200"
                   onClick={handleImport}
-                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-sm hover:bg-neutral-200 transition-colors"
                 >
                   <Upload size={15} />
                   Import
@@ -189,85 +191,85 @@ export default function BackupPage() {
         </div>
       </div>
 
-      <div className="p-6 border-t border-neutral-200 bg-neutral-50">
-        <div className="max-w-[800px] mx-auto">
+      <div className="border-neutral-200 border-t bg-neutral-50 p-6">
+        <div className="mx-auto max-w-[800px]">
           <div className="flex flex-wrap justify-center gap-4">
             <a
+              className="group flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 transition-all hover:border-neutral-400 hover:bg-neutral-50"
               href="https://buymeacoffee.com/lirena00"
-              target="_blank"
               rel="noopener noreferrer"
-              className="bg-white border border-neutral-200 rounded-lg px-4 py-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex items-center gap-2"
+              target="_blank"
             >
-              <span className="text-red-500 group-hover:scale-110 transition-transform">
+              <span className="text-red-500 transition-transform group-hover:scale-110">
                 <Heart size={16} />
               </span>
-              <span className="text-sm text-neutral-600 group-hover:text-neutral-800">
+              <span className="text-neutral-600 text-sm group-hover:text-neutral-800">
                 Support
               </span>
             </a>
 
             <a
+              className="group flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 transition-all hover:border-neutral-400 hover:bg-neutral-50"
               href="https://discord.gg/pdxMMNGWCU"
-              target="_blank"
               rel="noopener noreferrer"
-              className="bg-white border border-neutral-200 rounded-lg px-4 py-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex items-center gap-2"
+              target="_blank"
             >
-              <span className="text-indigo-500 group-hover:scale-110 transition-transform">
+              <span className="text-indigo-500 transition-transform group-hover:scale-110">
                 <Discord />
               </span>
-              <span className="text-sm text-neutral-600 group-hover:text-neutral-800">
+              <span className="text-neutral-600 text-sm group-hover:text-neutral-800">
                 Discord
               </span>
             </a>
 
             <a
+              className="group flex items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 transition-all hover:border-neutral-400 hover:bg-neutral-50"
               href="https://github.com/lirena00/monochromate"
-              target="_blank"
               rel="noopener noreferrer"
-              className="bg-white border border-neutral-200 rounded-lg px-4 py-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex items-center gap-2"
+              target="_blank"
             >
-              <span className="text-neutral-700 group-hover:scale-110 transition-transform">
+              <span className="text-neutral-700 transition-transform group-hover:scale-110">
                 <Github size={16} />
               </span>
-              <span className="text-sm text-neutral-600 group-hover:text-neutral-800">
+              <span className="text-neutral-600 text-sm group-hover:text-neutral-800">
                 Github
               </span>
             </a>
 
             <div
-              className="bg-white border border-neutral-200 rounded-lg px-4 py-2 hover:border-neutral-400 hover:bg-neutral-50 transition-all group flex items-center gap-2 cursor-pointer"
+              className="group flex cursor-pointer items-center gap-2 rounded-lg border border-neutral-200 bg-white px-4 py-2 transition-all hover:border-neutral-400 hover:bg-neutral-50"
               onClick={() => handleStarClick(5)}
             >
               <div className="flex gap-0.5">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <Star
-                    key={star}
-                    size={16}
-                    className={`transition-all cursor-pointer ${
+                    className={`cursor-pointer transition-all ${
                       star <= (hoveredStar || selectedRating || 0)
-                        ? "text-yellow-500 fill-yellow-500"
+                        ? "fill-yellow-500 text-yellow-500"
                         : "text-neutral-300"
                     } hover:scale-110`}
+                    key={star}
+                    onClick={() => handleStarClick(star)}
                     onMouseEnter={() => setHoveredStar(star)}
                     onMouseLeave={() => setHoveredStar(null)}
-                    onClick={() => handleStarClick(star)}
+                    size={16}
                   />
                 ))}
               </div>
-              <span className="text-sm text-neutral-600 group-hover:text-neutral-800">
+              <span className="text-neutral-600 text-sm group-hover:text-neutral-800">
                 Rate Us
               </span>
             </div>
           </div>
 
           <div className="mt-4 text-center">
-            <span className="text-xs text-neutral-500">
+            <span className="text-neutral-500 text-xs">
               Made with ❤️ by{" "}
               <a
+                className="text-neutral-700 underline decoration-dotted underline-offset-2 hover:text-neutral-900"
                 href="https://www.lirena.in?ref=monochromate&source=backup_page"
-                target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-700 hover:text-neutral-900 underline decoration-dotted underline-offset-2"
+                target="_blank"
               >
                 lirena00
               </a>

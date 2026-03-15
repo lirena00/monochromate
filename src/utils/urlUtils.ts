@@ -4,10 +4,10 @@
  */
 
 export interface URLExclusion {
-  type: "domain" | "pattern";
-  value: string;
   displayName: string;
   favicon?: string;
+  type: "domain" | "pattern";
+  value: string;
 }
 
 /**
@@ -129,7 +129,7 @@ export const getExclusionDisplayName = (
 
   // For patterns, show a clean version
   const maxLength = 45;
-  let displayValue = value.replace(/^https?:\/\//, "").replace(/^www\./, "");
+  const displayValue = value.replace(/^https?:\/\//, "").replace(/^www\./, "");
 
   if (displayValue.length <= maxLength) {
     return displayValue;
@@ -159,16 +159,20 @@ export const suggestUrlPattern = (currentUrl: string): string => {
     if (pathname.includes("/status/")) {
       // Twitter/X status URLs
       return `${domain}/*/status/*`;
-    } else if (pathname.includes("/watch")) {
+    }
+    if (pathname.includes("/watch")) {
       // YouTube watch URLs
       return `${domain}/watch*`;
-    } else if (pathname.includes("/maps/")) {
+    }
+    if (pathname.includes("/maps/")) {
       // Google Maps URLs
       return `${domain}/maps/*`;
-    } else if (pathname.includes("/post/") || pathname.includes("/posts/")) {
+    }
+    if (pathname.includes("/post/") || pathname.includes("/posts/")) {
       // Social media post URLs
       return `${domain}/*/post/*`;
-    } else if (pathname.split("/").length > 3) {
+    }
+    if (pathname.split("/").length > 3) {
       // Multi-level paths - suggest pattern for the section
       const pathParts = pathname.split("/").filter(Boolean);
       if (pathParts.length >= 2) {
@@ -259,9 +263,9 @@ export const isValidUrlPattern = (pattern: string): boolean => {
  * Parsed site entry from bulk import
  */
 export interface ParsedSite {
-  value: string;
   type: "domain" | "pattern";
   valid: boolean;
+  value: string;
 }
 
 /**
@@ -269,7 +273,9 @@ export interface ParsedSite {
  * Extracts domains from full URLs and identifies patterns
  */
 export const parseSitesFromText = (text: string): ParsedSite[] => {
-  if (!text.trim()) return [];
+  if (!text.trim()) {
+    return [];
+  }
 
   // Split by comma, newline, or multiple spaces
   const entries = text
@@ -281,7 +287,9 @@ export const parseSitesFromText = (text: string): ParsedSite[] => {
 
   for (const entry of entries) {
     // Skip empty entries
-    if (!entry) continue;
+    if (!entry) {
+      continue;
+    }
 
     // Check if it's a pattern (contains wildcard)
     const isPattern = entry.includes("*");
@@ -375,13 +383,12 @@ export const shouldApplyFilter = (
       settings.urlPatternBlacklist
     );
     return !isBlacklisted;
-  } else {
-    // Whitelist mode: Apply filter ONLY if URL is in whitelist
-    const isWhitelisted = isUrlInList(
-      url,
-      settings.whitelist,
-      settings.urlPatternWhitelist
-    );
-    return isWhitelisted;
   }
+  // Whitelist mode: Apply filter ONLY if URL is in whitelist
+  const isWhitelisted = isUrlInList(
+    url,
+    settings.whitelist,
+    settings.urlPatternWhitelist
+  );
+  return isWhitelisted;
 };

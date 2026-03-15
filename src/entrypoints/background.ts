@@ -1,14 +1,15 @@
 import { isMediaOnlyPage } from "@/utils/MediaCheckUtil";
 import { settings } from "@/utils/storage";
-import { shouldApplyFilter, getDomainFromUrl, isUrlInList } from "@/utils/urlUtils";
+import {
+  getDomainFromUrl,
+  isUrlInList,
+  shouldApplyFilter,
+} from "@/utils/urlUtils";
 
 export default defineBackground(() => {
   let settingsInitialized = false;
 
-  const updateBadge = (
-    enabled: boolean,
-    temporaryDisabled: boolean = false
-  ) => {
+  const updateBadge = (enabled: boolean, temporaryDisabled = false) => {
     if (temporaryDisabled) {
       browser.action.setBadgeText({ text: "❚❚" });
       browser.action.setBadgeBackgroundColor({ color: "#f5f5f5" });
@@ -50,7 +51,7 @@ export default defineBackground(() => {
     settings: any
   ): boolean => {
     const shouldApply = shouldApplyFilter(url, {
-      mode: settings.mode || 'blacklist',
+      mode: settings.mode || "blacklist",
       blacklist: settings.blacklist || [],
       urlPatternBlacklist: settings.urlPatternBlacklist || [],
       whitelist: settings.whitelist || [],
@@ -69,13 +70,15 @@ export default defineBackground(() => {
   const applyGreyscaleToAllTabsDebounced = debounce(
     (currentSettings: any) => {
       const intensity = currentSettings.intensity || 100;
-      const imageExceptionEnabled = currentSettings.mediaExceptionEnabled || false;
-      
+      const imageExceptionEnabled = currentSettings.mediaExceptionEnabled;
+
       browser.tabs.query({}).then((tabs) => {
         const tabsToUpdate = tabs.filter((tab) => {
-          if (!tab.id || !tab.url) return false;
+          if (!(tab.id && tab.url)) {
+            return false;
+          }
           return shouldApplyFilter(tab.url, {
-            mode: currentSettings.mode || 'blacklist',
+            mode: currentSettings.mode || "blacklist",
             blacklist: currentSettings.blacklist || [],
             urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
             whitelist: currentSettings.whitelist || [],
@@ -96,7 +99,7 @@ export default defineBackground(() => {
                   func: isMediaOnlyPage,
                 })
                 .then((results) => {
-                  const isMediaOnly = results?.[0]?.result || false;
+                  const isMediaOnly = results?.[0]?.result;
 
                   if (
                     !shouldApplyGrayscale(domain, isMediaOnly, {
@@ -126,7 +129,9 @@ export default defineBackground(() => {
                           let overlay = document.getElementById(
                             "monochromate-overlay"
                           );
-                          if (!overlay) {
+                          if (overlay) {
+                            overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                          } else {
                             overlay = document.createElement("div");
                             overlay.id = "monochromate-overlay";
                             overlay.style.cssText = `
@@ -140,8 +145,6 @@ export default defineBackground(() => {
                             backdrop-filter: grayscale(${intensity}%);
                           `;
                             document.documentElement.appendChild(overlay);
-                          } else {
-                            overlay.style.backdropFilter = `grayscale(${intensity}%)`;
                           }
                         }
                       },
@@ -155,13 +158,15 @@ export default defineBackground(() => {
                   // If image detection fails, apply greyscale normally
                   const domain = getHostname(tab.url || "");
                   const shouldApply = shouldApplyFilter(tab.url || "", {
-                    mode: currentSettings.mode || 'blacklist',
+                    mode: currentSettings.mode || "blacklist",
                     blacklist: currentSettings.blacklist || [],
-                    urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+                    urlPatternBlacklist:
+                      currentSettings.urlPatternBlacklist || [],
                     whitelist: currentSettings.whitelist || [],
-                    urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+                    urlPatternWhitelist:
+                      currentSettings.urlPatternWhitelist || [],
                   });
-                  
+
                   if (shouldApply) {
                     browser.scripting
                       .executeScript({
@@ -180,7 +185,9 @@ export default defineBackground(() => {
                             let overlay = document.getElementById(
                               "monochromate-overlay"
                             );
-                            if (!overlay) {
+                            if (overlay) {
+                              overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                            } else {
                               overlay = document.createElement("div");
                               overlay.id = "monochromate-overlay";
                               overlay.style.cssText = `
@@ -194,8 +201,6 @@ export default defineBackground(() => {
                               backdrop-filter: grayscale(${intensity}%);
                             `;
                               document.documentElement.appendChild(overlay);
-                            } else {
-                              overlay.style.backdropFilter = `grayscale(${intensity}%)`;
                             }
                           }
                         },
@@ -380,7 +385,9 @@ export default defineBackground(() => {
   };
 
   const unwatchSettings = settings.watch((newSettings, oldSettings) => {
-    if (!settingsInitialized) return;
+    if (!settingsInitialized) {
+      return;
+    }
 
     if (newSettings?.enabled !== oldSettings?.enabled) {
       updateBadge(
@@ -406,12 +413,12 @@ export default defineBackground(() => {
     if (
       (JSON.stringify(newSettings?.blacklist) !==
         JSON.stringify(oldSettings?.blacklist) ||
-      JSON.stringify(newSettings?.whitelist) !==
-        JSON.stringify(oldSettings?.whitelist) ||
-      JSON.stringify(newSettings?.urlPatternBlacklist) !==
-        JSON.stringify(oldSettings?.urlPatternBlacklist) ||
-      JSON.stringify(newSettings?.urlPatternWhitelist) !==
-        JSON.stringify(oldSettings?.urlPatternWhitelist)) &&
+        JSON.stringify(newSettings?.whitelist) !==
+          JSON.stringify(oldSettings?.whitelist) ||
+        JSON.stringify(newSettings?.urlPatternBlacklist) !==
+          JSON.stringify(oldSettings?.urlPatternBlacklist) ||
+        JSON.stringify(newSettings?.urlPatternWhitelist) !==
+          JSON.stringify(oldSettings?.urlPatternWhitelist)) &&
       newSettings?.enabled
     ) {
       applyGreyscaleToAllTabsDebounced(newSettings);
@@ -451,7 +458,9 @@ export default defineBackground(() => {
   const updateScheduleAlarm = async () => {
     const currentSettings = await settings.getValue();
     browser.alarms.clear("StartMonochromate").then(() => {
-      if (!currentSettings.scheduleStart) return;
+      if (!currentSettings.scheduleStart) {
+        return;
+      }
       const [startHours, startMinutes] = currentSettings.scheduleStart
         .split(":")
         .map(Number);
@@ -463,7 +472,9 @@ export default defineBackground(() => {
     });
 
     browser.alarms.clear("EndMonochromate").then(() => {
-      if (!currentSettings.scheduleEnd) return;
+      if (!currentSettings.scheduleEnd) {
+        return;
+      }
       const [endHours, endMinutes] = currentSettings.scheduleEnd
         .split(":")
         .map(Number);
@@ -539,7 +550,7 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener(async (message) => {
     const currentSettings = await settings.getValue();
     switch (message.type) {
-      case "toggleGreyscale":
+      case "toggleGreyscale": {
         // Clear temporary disable when manually toggling
         await browser.alarms.clear("EndTemporaryDisable");
         const newEnabled = !currentSettings.enabled;
@@ -551,6 +562,7 @@ export default defineBackground(() => {
         });
         updateBadge(newEnabled, false);
         break;
+      }
       case "setIntensity":
         await settings.setValue({
           ...currentSettings,
@@ -622,7 +634,7 @@ export default defineBackground(() => {
     const currentSettings = await settings.getValue();
 
     switch (command) {
-      case "toggle_greyscale":
+      case "toggle_greyscale": {
         const newEnabled = !currentSettings.enabled;
         await settings.setValue({
           ...currentSettings,
@@ -633,6 +645,7 @@ export default defineBackground(() => {
           currentSettings.temporaryDisable
         );
         break;
+      }
 
       case "quick_toggle_blacklist":
         browser.tabs
@@ -642,16 +655,16 @@ export default defineBackground(() => {
             if (currentTab?.url) {
               const currentUrl = currentTab.url;
               const domain = getDomainFromUrl(currentUrl);
-              const mode = currentSettings.mode || 'blacklist';
+              const mode = currentSettings.mode || "blacklist";
 
-              if (mode === 'blacklist') {
+              if (mode === "blacklist") {
                 // Blacklist mode: toggle in blacklist
                 const isInBlacklist = isUrlInList(
                   currentUrl,
                   currentSettings.blacklist,
                   currentSettings.urlPatternBlacklist || []
                 );
-                
+
                 if (isInBlacklist) {
                   // Remove from blacklist
                   const updatedBlacklist = currentSettings.blacklist.filter(
@@ -659,7 +672,9 @@ export default defineBackground(() => {
                   );
                   const updatedUrlPatternBlacklist = (
                     currentSettings.urlPatternBlacklist || []
-                  ).filter((pattern) => !isUrlInList(currentUrl, [], [pattern]));
+                  ).filter(
+                    (pattern) => !isUrlInList(currentUrl, [], [pattern])
+                  );
 
                   settings.setValue({
                     ...currentSettings,
@@ -680,15 +695,17 @@ export default defineBackground(() => {
                   currentSettings.whitelist || [],
                   currentSettings.urlPatternWhitelist || []
                 );
-                
+
                 if (isInWhitelist) {
                   // Remove from whitelist
-                  const updatedWhitelist = (currentSettings.whitelist || []).filter(
-                    (site) => site !== domain
-                  );
+                  const updatedWhitelist = (
+                    currentSettings.whitelist || []
+                  ).filter((site) => site !== domain);
                   const updatedUrlPatternWhitelist = (
                     currentSettings.urlPatternWhitelist || []
-                  ).filter((pattern) => !isUrlInList(currentUrl, [], [pattern]));
+                  ).filter(
+                    (pattern) => !isUrlInList(currentUrl, [], [pattern])
+                  );
 
                   settings.setValue({
                     ...currentSettings,
@@ -706,23 +723,29 @@ export default defineBackground(() => {
             }
           });
         break;
-      case "increase_intensity":
-        if (!currentSettings.enabled) break;
+      case "increase_intensity": {
+        if (!currentSettings.enabled) {
+          break;
+        }
         const newIntensityUp = Math.min(100, currentSettings.intensity + 10);
         await settings.setValue({
           ...currentSettings,
           intensity: newIntensityUp,
         });
         break;
+      }
 
-      case "decrease_intensity":
-        if (!currentSettings.enabled) break;
+      case "decrease_intensity": {
+        if (!currentSettings.enabled) {
+          break;
+        }
         const newIntensityDown = Math.max(0, currentSettings.intensity - 10);
         await settings.setValue({
           ...currentSettings,
           intensity: newIntensityDown,
         });
         break;
+      }
     }
   });
 
@@ -733,13 +756,13 @@ export default defineBackground(() => {
       browser.tabs.get(tabId).then((tab) => {
         if (tab.url) {
           const shouldApply = shouldApplyFilter(tab.url, {
-            mode: currentSettings.mode || 'blacklist',
+            mode: currentSettings.mode || "blacklist",
             blacklist: currentSettings.blacklist || [],
             urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
             whitelist: currentSettings.whitelist || [],
             urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
           });
-          
+
           if (shouldApply) {
             // Check if it's a media-only page first
             browser.scripting
@@ -748,7 +771,7 @@ export default defineBackground(() => {
                 func: isMediaOnlyPage,
               })
               .then((results) => {
-                const isMediaOnly = results?.[0]?.result || false;
+                const isMediaOnly = results?.[0]?.result;
 
                 // Skip applying greyscale if it's a media-only page and exception is enabled
                 if (isMediaOnly && currentSettings.mediaExceptionEnabled) {
@@ -772,7 +795,9 @@ export default defineBackground(() => {
                         let overlay = document.getElementById(
                           "monochromate-overlay"
                         );
-                        if (!overlay) {
+                        if (overlay) {
+                          overlay.style.backdropFilter = `grayscale(${intensity}%)`;
+                        } else {
                           overlay = document.createElement("div");
                           overlay.id = "monochromate-overlay";
                           overlay.style.cssText = `
@@ -786,8 +811,6 @@ export default defineBackground(() => {
                             backdrop-filter: grayscale(${intensity}%);
                           `;
                           document.documentElement.appendChild(overlay);
-                        } else {
-                          overlay.style.backdropFilter = `grayscale(${intensity}%)`;
                         }
                       }
                     },

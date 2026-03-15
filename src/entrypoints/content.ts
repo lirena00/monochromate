@@ -1,10 +1,7 @@
-import { ContentScriptContext } from "#imports";
-import {
-  isDirectMediaUrl,
-  isMediaOnlyPage,
-  clearMediaCheckCache,
-} from "@/utils/MediaCheckUtil";
-import { shouldExcludeUrl, getDomainFromUrl } from "@/utils/urlUtils";
+import type { ContentScriptContext } from "#imports";
+import { clearMediaCheckCache, isMediaOnlyPage } from "@/utils/MediaCheckUtil";
+import { shouldExcludeUrl } from "@/utils/urlUtils";
+
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
 };
@@ -63,9 +60,11 @@ const getMediaOnlyStatus = (): boolean => {
   return cachedMediaOnlyResult;
 };
 
-const updateOverlay = (show: boolean, intensity: number = 100) => {
+const updateOverlay = (show: boolean, intensity = 100) => {
   if (show && !isFullscreenActive && !currentSettings.temporaryDisable) {
-    if (!overlayElement) {
+    if (overlayElement) {
+      overlayElement.style.backdropFilter = `grayscale(${intensity}%)`;
+    } else {
       overlayElement = document.createElement("div");
       overlayElement.id = "monochromate-overlay";
       overlayElement.style.cssText = `
@@ -79,8 +78,6 @@ const updateOverlay = (show: boolean, intensity: number = 100) => {
         backdrop-filter: grayscale(${intensity}%);
       `;
       document.documentElement.appendChild(overlayElement);
-    } else {
-      overlayElement.style.backdropFilter = `grayscale(${intensity}%)`;
     }
   } else if (overlayElement) {
     overlayElement.remove();
@@ -177,7 +174,9 @@ const setupMutationObserver = () => {
           ...mutation.addedNodes,
           ...mutation.removedNodes,
         ].some((node) => {
-          if (!(node instanceof Element)) return false;
+          if (!(node instanceof Element)) {
+            return false;
+          }
           return (
             node.tagName === "IMG" ||
             node.tagName === "VIDEO" ||

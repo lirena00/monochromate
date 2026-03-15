@@ -39,7 +39,7 @@ type MonofilterTypes = {
   urlPatternBlacklist: string[];
   whitelist: string[];
   urlPatternWhitelist: string[];
-  mode: 'blacklist' | 'whitelist';
+  mode: "blacklist" | "whitelist";
   scheduleStart: string;
   scheduleEnd: string;
   schedule: boolean;
@@ -58,7 +58,7 @@ export const settings = storage.defineItem<MonofilterTypes>(
       urlPatternBlacklist: [],
       whitelist: [],
       urlPatternWhitelist: [],
-      mode: 'blacklist',
+      mode: "blacklist",
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
@@ -85,7 +85,7 @@ export const settings = storage.defineItem<MonofilterTypes>(
       4: (oldValue: MonofilterTypes_v3): MonofilterTypes => {
         return {
           ...oldValue,
-          mode: 'blacklist',
+          mode: "blacklist",
           whitelist: [],
           urlPatternWhitelist: [],
         };

@@ -1,12 +1,12 @@
-import React from "react";
-import { ShieldOff, ShieldCheck } from "lucide-react";
+import { ShieldCheck, ShieldOff } from "lucide-react";
+import type React from "react";
 import InfoTooltip from "./InfoTooltip";
 
 interface ModeSelectorCardProps {
-  mode: "blacklist" | "whitelist";
   blacklistCount: number;
-  whitelistCount: number;
+  mode: "blacklist" | "whitelist";
   onModeChange: (mode: "blacklist" | "whitelist") => void;
+  whitelistCount: number;
 }
 
 const ModeSelectorCard: React.FC<ModeSelectorCardProps> = ({
@@ -16,8 +16,8 @@ const ModeSelectorCard: React.FC<ModeSelectorCardProps> = ({
   onModeChange,
 }) => {
   return (
-    <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      <div className="flex items-center justify-between mb-3">
+    <div className="rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+      <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="text-neutral-700">
             {mode === "blacklist" ? (
@@ -27,7 +27,7 @@ const ModeSelectorCard: React.FC<ModeSelectorCardProps> = ({
             )}
           </div>
           <div>
-            <h2 className="font-semibold text-neutral-800 text-sm flex items-center gap-1.5">
+            <h2 className="flex items-center gap-1.5 font-semibold text-neutral-800 text-sm">
               Site Filter Mode
               <InfoTooltip
                 content={
@@ -37,7 +37,7 @@ const ModeSelectorCard: React.FC<ModeSelectorCardProps> = ({
                 }
               />
             </h2>
-            <p className="text-xs text-neutral-500 italic">
+            <p className="text-neutral-500 text-xs italic">
               {mode === "blacklist"
                 ? "Extension OFF on listed sites"
                 : "Extension ON only for listed sites"}
@@ -48,19 +48,19 @@ const ModeSelectorCard: React.FC<ModeSelectorCardProps> = ({
 
       <div className="flex gap-2">
         <button
-          onClick={() => onModeChange("blacklist")}
-          className={`flex-1 flex flex-col items-center gap-1 p-3 rounded-lg border transition-all ${
+          className={`flex flex-1 flex-col items-center gap-1 rounded-lg border p-3 transition-all ${
             mode === "blacklist"
-              ? "bg-neutral-900 text-white border-neutral-900"
-              : "bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400"
+              ? "border-neutral-900 bg-neutral-900 text-white"
+              : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400"
           }`}
+          onClick={() => onModeChange("blacklist")}
         >
           <div className="flex items-center gap-1.5">
             <ShieldOff size={14} />
-            <span className="text-xs font-medium">Blacklist</span>
+            <span className="font-medium text-xs">Blacklist</span>
           </div>
           <span
-            className={`text-xs px-1.5 py-0.5 rounded-full ${
+            className={`rounded-full px-1.5 py-0.5 text-xs ${
               mode === "blacklist"
                 ? "bg-white/20 text-white"
                 : "bg-neutral-100 text-neutral-500"
@@ -74,19 +74,19 @@ const ModeSelectorCard: React.FC<ModeSelectorCardProps> = ({
         </button>
 
         <button
-          onClick={() => onModeChange("whitelist")}
-          className={`flex-1 flex flex-col items-center gap-1 p-3 rounded-lg border transition-all ${
+          className={`flex flex-1 flex-col items-center gap-1 rounded-lg border p-3 transition-all ${
             mode === "whitelist"
-              ? "bg-neutral-900 text-white border-neutral-900"
-              : "bg-white text-neutral-700 border-neutral-200 hover:border-neutral-400"
+              ? "border-neutral-900 bg-neutral-900 text-white"
+              : "border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400"
           }`}
+          onClick={() => onModeChange("whitelist")}
         >
           <div className="flex items-center gap-1.5">
             <ShieldCheck size={14} />
-            <span className="text-xs font-medium">Whitelist</span>
+            <span className="font-medium text-xs">Whitelist</span>
           </div>
           <span
-            className={`text-xs px-1.5 py-0.5 rounded-full ${
+            className={`rounded-full px-1.5 py-0.5 text-xs ${
               mode === "whitelist"
                 ? "bg-white/20 text-white"
                 : "bg-neutral-100 text-neutral-500"

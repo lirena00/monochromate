@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
 import { Sliders } from "lucide-react";
-import { getShortcutByName } from "@/utils/shortcuts";
+import type React from "react";
+import { useEffect, useState } from "react";
 import ShortcutBadge from "@/components/ShortcutBadge";
+import { getShortcutByName } from "@/utils/shortcuts";
 
 interface IntensityCardProps {
-  intensity: number;
   enabled: boolean;
+  intensity: number;
   onIntensityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -23,37 +24,37 @@ const IntensityCard: React.FC<IntensityCardProps> = ({
   }, []);
 
   return (
-    <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+      <div className="mb-2 flex items-center gap-2">
         <div className="text-neutral-700">
           <Sliders size={18} />
         </div>
         <div className="flex-1">
-          <h2 className="font-semibold text-sm text-neutral-800">
+          <h2 className="font-semibold text-neutral-800 text-sm">
             Filter Intensity
           </h2>
-          <p className="text-xs text-neutral-500 italic">Adjust the strength</p>
+          <p className="text-neutral-500 text-xs italic">Adjust the strength</p>
         </div>
       </div>
 
       <div className="relative">
         <input
-          type="range"
-          min="0"
-          max="100"
-          value={intensity}
-          onChange={onIntensityChange}
-          disabled={!enabled}
           className="w-full accent-neutral-900"
+          disabled={!enabled}
+          max="100"
+          min="0"
+          onChange={onIntensityChange}
+          type="range"
+          value={intensity}
         />
 
-        <div className="flex justify-between items-center mt-1.5">
+        <div className="mt-1.5 flex items-center justify-between">
           {decreaseShortcut && (
-            <ShortcutBadge size="xs" shortcut={decreaseShortcut} />
+            <ShortcutBadge shortcut={decreaseShortcut} size="xs" />
           )}
-          <div className="text-xs text-neutral-600 ">{intensity}%</div>
+          <div className="text-neutral-600 text-xs">{intensity}%</div>
           {increaseShortcut && (
-            <ShortcutBadge size="xs" shortcut={increaseShortcut} />
+            <ShortcutBadge shortcut={increaseShortcut} size="xs" />
           )}
         </div>
       </div>

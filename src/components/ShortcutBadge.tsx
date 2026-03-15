@@ -1,10 +1,10 @@
-import React from "react";
 import {
-  ChevronRight,
-  ChevronLeft,
-  ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
 } from "lucide-react";
+import React from "react";
 import { parseShortcut } from "@/utils/shortcuts";
 
 interface ShortcutBadgeProps {
@@ -18,7 +18,9 @@ const ShortcutBadge: React.FC<ShortcutBadgeProps> = ({
 }) => {
   const { keys, hasShortcut } = parseShortcut(shortcut);
 
-  if (!hasShortcut) return null;
+  if (!hasShortcut) {
+    return null;
+  }
 
   const sizeClasses = {
     xs: "text-xs px-1.5 py-0.5",
@@ -65,7 +67,7 @@ const ShortcutBadge: React.FC<ShortcutBadgeProps> = ({
       {keys.map((key, index) => (
         <React.Fragment key={index}>
           <span
-            className={`${sizeClasses[size]} bg-neutral-200 text-neutral-600 font-mono rounded border border-neutral-300  flex items-center justify-center`}
+            className={`${sizeClasses[size]} flex items-center justify-center rounded border border-neutral-300 bg-neutral-200 font-mono text-neutral-600`}
           >
             {getKeyContent(key)}
           </span>

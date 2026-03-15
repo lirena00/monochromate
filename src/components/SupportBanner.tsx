@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
-import { Heart, Star, X, Coffee, Gift } from "lucide-react";
+import { Gift, Star, X } from "lucide-react";
+import type React from "react";
+import { useEffect, useState } from "react";
 
 interface SupportBannerProps {
   onDismiss?: () => void;
@@ -11,14 +12,14 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
 
   const messages = [
     {
-      icon: <Gift size={18} className="text-neutral-700" />,
+      icon: <Gift className="text-neutral-700" size={18} />,
       title: "Keep Monochromate free",
       text: "Your support helps us add new features and keep the extension open source",
       cta: "Donate",
       action: () => window.open("https://buymeacoffee.com/lirena00", "_blank"),
     },
     {
-      icon: <Star size={18} className="text-neutral-700" />,
+      icon: <Star className="text-neutral-700" size={18} />,
       title: "Help others discover us",
       text: "Rate us on the extension store and help people find monochromate",
       cta: "Rate Us",
@@ -102,33 +103,35 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
     checkDismissalState();
   }, []);
 
-  if (!isVisible) return null;
+  if (!isVisible) {
+    return null;
+  }
 
   const currentMsg = messages[currentMessage];
 
   return (
-    <div className="bg-neutral-100 relative border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
+    <div className="relative rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
       <div className="flex items-center gap-2">
         <div className="text-neutral-700">{currentMsg.icon}</div>
         <div className="flex-1">
-          <h2 className="font-semibold text-sm text-neutral-800">
+          <h2 className="font-semibold text-neutral-800 text-sm">
             {currentMsg.title}
           </h2>
-          <p className="text-xs text-neutral-500 italic">{currentMsg.text}</p>
+          <p className="text-neutral-500 text-xs italic">{currentMsg.text}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <button
+            className="rounded-lg bg-neutral-800 px-3 py-2 text-white text-xs transition-colors hover:bg-neutral-900"
             onClick={currentMsg.action}
-            className="px-3 py-2 text-xs bg-neutral-800 text-white rounded-lg hover:bg-neutral-900 transition-colors"
           >
             {currentMsg.cta}
           </button>
           <button
+            className="absolute top-0 right-0 rounded-tr-lg rounded-bl-lg bg-neutral-800 p-1 transition-colors hover:bg-neutral-900"
             onClick={handleDismiss}
-            className="absolute top-0 right-0 p-1 bg-neutral-800 hover:bg-neutral-900 rounded-tr-lg rounded-bl-lg transition-colors"
             title="Dismiss for 3 days"
           >
-            <X size={10} className="text-white" />
+            <X className="text-white" size={10} />
           </button>
         </div>
       </div>

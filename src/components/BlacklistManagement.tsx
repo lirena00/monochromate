@@ -1,42 +1,41 @@
-import React, { useState, useEffect, useMemo } from "react";
 import {
-  ArrowLeft,
-  Search,
   AlertCircle,
-  X,
-  Shield,
+  ArrowLeft,
   Filter,
-  Link,
   Globe,
+  Link,
+  Search,
+  Shield,
+  X,
 } from "lucide-react";
-import Footer from "./Footer";
-import InfoTooltip from "./InfoTooltip";
+import type React from "react";
+import { useEffect, useMemo, useState } from "react";
+import ShortcutBadge from "@/components/ShortcutBadge";
 import { getShortcutByName } from "@/utils/shortcuts";
 import {
   getUnifiedExclusions,
-  URLExclusion,
-  getDomainFromUrl,
-  suggestUrlPattern,
   isValidUrlPattern,
+  suggestUrlPattern,
   urlMatchesPattern,
 } from "@/utils/urlUtils";
-import ShortcutBadge from "@/components/ShortcutBadge";
+import Footer from "./Footer";
+import InfoTooltip from "./InfoTooltip";
 
 interface BlacklistManagementProps {
-  searchTerm: string;
-  currentUrl: string;
-  currentFullUrl: string;
   blacklist: string[];
-  urlPatternBlacklist: string[];
+  currentFullUrl: string;
+  currentUrl: string;
   filteredBlacklist: string[];
   isCurrentUrlBlacklisted: boolean;
-  onSearchChange: (value: string) => void;
-  onReturnToMain: () => void;
+  mediaExceptionEnabled: boolean;
   onAddCurrentSite: () => void;
   onAddCurrentUrl: () => void;
   onRemoveSite: (site: string, type?: "domain" | "pattern") => void;
-  mediaExceptionEnabled: boolean;
+  onReturnToMain: () => void;
+  onSearchChange: (value: string) => void;
   onToggleMediaException: () => void;
+  searchTerm: string;
+  urlPatternBlacklist: string[];
 }
 
 type FilterType = "all" | "domains" | "patterns";
@@ -117,7 +116,7 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
   }, [unifiedExclusions]);
 
   const handleAddCustomPattern = () => {
-    if (!customPattern.trim() || !isValidUrlPattern(customPattern)) {
+    if (!(customPattern.trim() && isValidUrlPattern(customPattern))) {
       return;
     }
 
@@ -139,18 +138,18 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
     count: number;
   }> = ({ type, label, icon, count }) => (
     <button
-      onClick={() => setActiveFilter(type)}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors ${
+      className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
         activeFilter === type
           ? "bg-neutral-900 text-white"
-          : "bg-white border border-neutral-200 text-neutral-600 hover:bg-neutral-50"
+          : "border border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50"
       }`}
+      onClick={() => setActiveFilter(type)}
     >
       {icon}
       <span>{label}</span>
       {count > 0 && (
         <span
-          className={`px-1 py-0.5 text-xs rounded-full ${
+          className={`rounded-full px-1 py-0.5 text-xs ${
             activeFilter === type
               ? "bg-white/20 text-white"
               : "bg-neutral-100 text-neutral-500"
@@ -163,22 +162,22 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
   );
 
   return (
-    <div className="flex flex-col min-h-[800px] overflow-hidden">
-      <div className="flex items-center gap-3 mb-4">
+    <div className="flex min-h-[800px] flex-col overflow-hidden">
+      <div className="mb-4 flex items-center gap-3">
         <button
+          className="flex items-center justify-center rounded-full p-1 transition-colors hover:bg-neutral-100"
           onClick={onReturnToMain}
-          className="p-1 rounded-full hover:bg-neutral-100 flex items-center justify-center transition-colors"
         >
           <ArrowLeft size={20} />
         </button>
-        <h1 className="text-lg font-bold text-neutral-800">
+        <h1 className="font-bold text-lg text-neutral-800">
           Manage Excluded Sites
         </h1>
       </div>
 
       {/* Current Site Card */}
-      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all mb-4">
-        <div className="flex items-center gap-3 mb-3">
+      <div className="mb-4 rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+        <div className="mb-3 flex items-center gap-3">
           <div className="text-neutral-700">
             <Shield size={18} />
           </div>
@@ -187,32 +186,33 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
               Current Site & Settings
             </h2>
             <div className="flex items-center gap-1">
-              <p className="text-xs text-neutral-500 italic">
+              <p className="text-neutral-500 text-xs italic">
                 Manage current site exclusion settings
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg border border-neutral-200 p-3">
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <div className="w-3.5 h-3.5 bg-neutral-200 rounded-full overflow-hidden flex-shrink-0">
+        <div className="rounded-lg border border-neutral-200 bg-white p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
+              <div className="h-3.5 w-3.5 flex-shrink-0 overflow-hidden rounded-full bg-neutral-200">
                 {currentUrl && (
                   <img
-                    src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
                     alt=""
-                    className="w-full h-full object-cover"
+                    className="h-full w-full object-cover"
+                    src={`https://www.google.com/s2/favicons?domain=${currentUrl}&sz=32`}
                   />
                 )}
               </div>
-              <span className="text-xs font-medium truncate">{currentUrl}</span>
+              <span className="truncate font-medium text-xs">{currentUrl}</span>
             </div>
 
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex flex-shrink-0 items-center gap-2">
               <ShortcutBadge shortcut={shortcut} />
               {isCurrentUrlBlacklisted ? (
                 <button
+                  className="rounded bg-neutral-200 px-2 py-1 text-neutral-700 text-xs transition-colors hover:bg-neutral-300"
                   onClick={() => {
                     // Determine which type to remove
                     const domain = currentUrl;
@@ -227,55 +227,54 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                       onRemoveSite(matchingPattern, "pattern");
                     }
                   }}
-                  className="text-xs px-2 py-1 bg-neutral-200 text-neutral-700 rounded hover:bg-neutral-300 transition-colors"
                 >
                   Remove
                 </button>
               ) : (
                 <div className="relative">
                   <button
+                    className="flex items-center gap-1 rounded bg-neutral-900 px-2 py-1 text-white text-xs transition-colors hover:bg-neutral-800"
                     onClick={() => setShowUrlOption(!showUrlOption)}
-                    className="flex items-center gap-1 text-xs px-2 py-1 bg-neutral-900 text-white rounded hover:bg-neutral-800 transition-colors"
                   >
                     Exclude
                     <X
-                      size={10}
                       className={`transition-transform ${
                         showUrlOption ? "rotate-45" : "rotate-0"
                       }`}
+                      size={10}
                     />
                   </button>
 
                   {showUrlOption && (
-                    <div className="absolute top-full right-0 mt-1 bg-white border border-neutral-200 rounded-lg shadow-lg z-50 min-w-[180px] text-xs">
+                    <div className="absolute top-full right-0 z-50 mt-1 min-w-[180px] rounded-lg border border-neutral-200 bg-white text-xs shadow-lg">
                       <div className="p-1.5">
                         <button
+                          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
                           onClick={() => {
                             onAddCurrentSite();
                             setShowUrlOption(false);
                           }}
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-neutral-50 rounded transition-colors"
                         >
-                          <Globe size={12} className="text-neutral-600" />
+                          <Globe className="text-neutral-600" size={12} />
                           <div className="text-left">
                             <div className="font-medium">Entire domain</div>
-                            <div className="text-xs text-neutral-500 truncate">
+                            <div className="truncate text-neutral-500 text-xs">
                               All pages on {currentUrl}
                             </div>
                           </div>
                         </button>
 
                         <button
+                          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
                           onClick={() => {
                             onAddCurrentUrl();
                             setShowUrlOption(false);
                           }}
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-neutral-50 rounded transition-colors"
                         >
-                          <Link size={12} className="text-neutral-600" />
+                          <Link className="text-neutral-600" size={12} />
                           <div className="text-left">
                             <div className="font-medium">Smart pattern</div>
-                            <div className="text-xs text-neutral-500 truncate">
+                            <div className="truncate text-neutral-500 text-xs">
                               {suggestUrlPattern(currentFullUrl).substring(
                                 0,
                                 20
@@ -286,16 +285,16 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                         </button>
 
                         <button
+                          className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
                           onClick={() => {
                             setShowPatternInput(true);
                             setShowUrlOption(false);
                           }}
-                          className="flex items-center gap-2 w-full px-2 py-1.5 text-xs hover:bg-neutral-50 rounded transition-colors"
                         >
-                          <Filter size={12} className="text-neutral-600" />
+                          <Filter className="text-neutral-600" size={12} />
                           <div className="text-left">
                             <div className="font-medium">Custom pattern</div>
-                            <div className="text-xs text-neutral-500">
+                            <div className="text-neutral-500 text-xs">
                               Define your own rule
                             </div>
                           </div>
@@ -310,20 +309,17 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
 
           {/* Custom Pattern Input */}
           {showPatternInput && (
-            <div className="mt-3 p-2.5 bg-neutral-50 rounded-lg border">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Filter size={12} className="text-neutral-600" />
-                <span className="text-xs font-medium">Custom URL Pattern</span>
+            <div className="mt-3 rounded-lg border bg-neutral-50 p-2.5">
+              <div className="mb-2 flex items-center gap-1.5">
+                <Filter className="text-neutral-600" size={12} />
+                <span className="font-medium text-xs">Custom URL Pattern</span>
                 <InfoTooltip content="Use * as wildcard. Example: google.com/maps/* will match all Google Maps URLs" />
               </div>
 
               <div className="flex gap-2">
                 <input
-                  type="text"
-                  value={customPattern}
+                  className="flex-1 rounded border border-neutral-200 px-2 py-1.5 text-xs focus:border-neutral-400 focus:outline-none"
                   onChange={(e) => setCustomPattern(e.target.value)}
-                  placeholder="example.com/path/*"
-                  className="flex-1 px-2 py-1.5 text-xs border border-neutral-200 rounded focus:outline-none focus:border-neutral-400"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       handleAddCustomPattern();
@@ -331,26 +327,29 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                       setShowPatternInput(false);
                     }
                   }}
+                  placeholder="example.com/path/*"
+                  type="text"
+                  value={customPattern}
                 />
                 <button
-                  onClick={handleAddCustomPattern}
+                  className="rounded bg-neutral-900 px-2 py-1.5 text-white text-xs transition-colors hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={
-                    !customPattern.trim() || !isValidUrlPattern(customPattern)
+                    !(customPattern.trim() && isValidUrlPattern(customPattern))
                   }
-                  className="px-2 py-1.5 text-xs bg-neutral-900 text-white rounded hover:bg-neutral-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  onClick={handleAddCustomPattern}
                 >
                   Add
                 </button>
                 <button
+                  className="rounded border border-neutral-200 px-2 py-1.5 text-xs transition-colors hover:bg-neutral-50"
                   onClick={() => setShowPatternInput(false)}
-                  className="px-2 py-1.5 text-xs border border-neutral-200 rounded hover:bg-neutral-50 transition-colors"
                 >
                   Cancel
                 </button>
               </div>
 
               {customPattern && !isValidUrlPattern(customPattern) && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="mt-1 text-red-500 text-xs">
                   Invalid pattern. Use format: domain.com/path/*
                 </p>
               )}
@@ -358,30 +357,30 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
           )}
 
           {/* Media Exception */}
-          <div className="flex items-center justify-between pt-3 border-t border-neutral-200">
+          <div className="flex items-center justify-between border-neutral-200 border-t pt-3">
             <div className="flex items-center gap-1">
-              <span className="text-xs text-neutral-600">
+              <span className="text-neutral-600 text-xs">
                 Exclude media-only pages
               </span>
               <InfoTooltip content="Automatically exclude pages that only contain images or videos (like photo galleries, video players)" />
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
+            <label className="relative inline-flex cursor-pointer items-center">
               <input
-                type="checkbox"
-                className="sr-only peer"
                 checked={mediaExceptionEnabled}
+                className="peer sr-only"
                 onChange={onToggleMediaException}
+                type="checkbox"
               />
-              <div className="w-9 h-5 bg-neutral-200 rounded-full peer-checked:bg-neutral-900 transition-colors"></div>
-              <div className="absolute top-0.5 left-0.5 bg-white border border-neutral-300 rounded-full h-4 w-4 transition-transform peer-checked:translate-x-4"></div>
+              <div className="h-5 w-9 rounded-full bg-neutral-200 transition-colors peer-checked:bg-neutral-900" />
+              <div className="absolute top-0.5 left-0.5 h-4 w-4 rounded-full border border-neutral-300 bg-white transition-transform peer-checked:translate-x-4" />
             </label>
           </div>
         </div>
       </div>
 
       {/* All Excluded Sites Card */}
-      <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all flex-1 flex flex-col min-h-[350px]">
-        <div className="flex items-center gap-3 mb-3">
+      <div className="flex min-h-[350px] flex-1 flex-col rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+        <div className="mb-3 flex items-center gap-3">
           <div className="text-neutral-700">
             <Filter size={18} />
           </div>
@@ -389,13 +388,13 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
             <h2 className="font-semibold text-neutral-800 text-sm">
               All Excluded Sites
               {filterCounts.all > 0 && (
-                <span className="ml-2 px-1.5 py-0.5 text-xs bg-neutral-200 rounded-full">
+                <span className="ml-2 rounded-full bg-neutral-200 px-1.5 py-0.5 text-xs">
                   {filterCounts.all}
                 </span>
               )}
             </h2>
             <div className="flex items-center gap-1">
-              <p className="text-xs text-neutral-500 italic">
+              <p className="text-neutral-500 text-xs italic">
                 Search and filter all exclusions
               </p>
             </div>
@@ -403,68 +402,68 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
         </div>
 
         {/* Filter Tabs */}
-        <div className="flex gap-1.5 mb-3">
+        <div className="mb-3 flex gap-1.5">
           <FilterButton
-            type="all"
-            label="All"
-            icon={<Filter size={12} />}
             count={filterCounts.all}
+            icon={<Filter size={12} />}
+            label="All"
+            type="all"
           />
           <FilterButton
-            type="domains"
-            label="Domains"
-            icon={<Globe size={12} />}
             count={filterCounts.domains}
+            icon={<Globe size={12} />}
+            label="Domains"
+            type="domains"
           />
           <FilterButton
-            type="patterns"
-            label="Patterns"
-            icon={<Link size={12} />}
             count={filterCounts.patterns}
+            icon={<Link size={12} />}
+            label="Patterns"
+            type="patterns"
           />
         </div>
 
         {/* Search Bar */}
         <div className="relative mb-3">
-          <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-neutral-500">
+          <div className="absolute top-1/2 left-2.5 -translate-y-1/2 text-neutral-500">
             <Search size={12} />
           </div>
           <input
-            type="text"
-            className="w-full pl-8 pr-3 py-2 bg-white border border-neutral-200 rounded-lg text-xs hover:border-neutral-400 transition-all focus:outline-none focus:border-neutral-400"
+            autoFocus
+            className="w-full rounded-lg border border-neutral-200 bg-white py-2 pr-3 pl-8 text-xs transition-all hover:border-neutral-400 focus:border-neutral-400 focus:outline-none"
+            onChange={(e) => onSearchChange(e.target.value)}
             placeholder={`Search ${
               activeFilter === "all" ? "all exclusions" : activeFilter
             }...`}
+            type="text"
             value={searchTerm}
-            onChange={(e) => onSearchChange(e.target.value)}
-            autoFocus
           />
         </div>
 
         {/* Sites List */}
-        <div className="flex-1 overflow-y-auto bg-white rounded-lg border border-neutral-200 min-h-0">
+        <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-neutral-200 bg-white">
           {filteredExclusions.length > 0 ? (
             filteredExclusions.map((exclusion) => (
               <div
+                className="flex items-center justify-between border-neutral-200 border-b px-3 py-2.5 transition-colors last:border-0 hover:bg-neutral-50"
                 key={`${exclusion.type}-${exclusion.value}`}
-                className="flex justify-between items-center py-2.5 px-3 border-b border-neutral-200 last:border-0 hover:bg-neutral-50 transition-colors"
               >
-                <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                  <div className="w-3.5 h-3.5 bg-neutral-200 rounded-full overflow-hidden flex-shrink-0">
+                <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                  <div className="h-3.5 w-3.5 flex-shrink-0 overflow-hidden rounded-full bg-neutral-200">
                     <img
-                      src={exclusion.favicon}
                       alt=""
-                      className="w-full h-full object-cover"
+                      className="h-full w-full object-cover"
+                      src={exclusion.favicon}
                     />
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs text-neutral-700 truncate">
+                      <span className="truncate text-neutral-700 text-xs">
                         {exclusion.displayName}
                       </span>
                       <div
-                        className={`flex items-center gap-1 px-1 py-0.5 rounded text-xs ${
+                        className={`flex items-center gap-1 rounded px-1 py-0.5 text-xs ${
                           exclusion.type === "domain"
                             ? "bg-blue-100 text-blue-700"
                             : "bg-green-100 text-green-700"
@@ -480,7 +479,7 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                     </div>
                     {exclusion.type === "pattern" &&
                       exclusion.value !== exclusion.displayName && (
-                        <div className="text-xs text-neutral-400 truncate mt-0.5 font-mono">
+                        <div className="mt-0.5 truncate font-mono text-neutral-400 text-xs">
                           {exclusion.value}
                         </div>
                       )}
@@ -488,8 +487,8 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                 </div>
 
                 <button
+                  className="ml-2 flex-shrink-0 text-neutral-500 transition-colors hover:text-red-500"
                   onClick={() => onRemoveSite(exclusion.value, exclusion.type)}
-                  className="text-neutral-500 hover:text-red-500 transition-colors ml-2 flex-shrink-0"
                   title={`Remove ${exclusion.type} exclusion`}
                 >
                   <X size={12} />
@@ -497,13 +496,13 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
               </div>
             ))
           ) : (
-            <div className="py-6 px-3 text-center flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-2 px-3 py-6 text-center">
               {searchTerm ? (
                 <>
                   <div className="text-neutral-400">
                     <AlertCircle size={16} />
                   </div>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-neutral-500 text-xs">
                     No {activeFilter === "all" ? "exclusions" : activeFilter}{" "}
                     match "{searchTerm}"
                   </p>
@@ -519,14 +518,14 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
                       <Link size={16} />
                     )}
                   </div>
-                  <p className="text-xs text-neutral-500">
+                  <p className="text-neutral-500 text-xs">
                     No {activeFilter === "all" ? "exclusions" : activeFilter}{" "}
                     yet
                   </p>
                   {activeFilter !== "all" && (
                     <button
+                      className="text-neutral-400 text-xs underline hover:text-neutral-600"
                       onClick={() => setActiveFilter("all")}
-                      className="text-xs text-neutral-400 hover:text-neutral-600 underline"
                     >
                       View all exclusions
                     </button>

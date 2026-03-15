@@ -1,12 +1,12 @@
-import { settings } from "#imports";
 import {
-  Upload,
+  CheckCircle,
   Download,
   ExternalLink,
-  CheckCircle,
+  Upload,
   XCircle,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { settings } from "#imports";
 
 export default function Backup() {
   const [isFirefox, setIsFirefox] = useState(false);
@@ -40,7 +40,7 @@ export default function Backup() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `monochromate-settings-backup.json`;
+        a.download = "monochromate-settings-backup.json";
         a.click();
         URL.revokeObjectURL(url);
 
@@ -60,7 +60,9 @@ export default function Backup() {
     input.accept = ".json";
     input.onchange = async (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+      if (!file) {
+        return;
+      }
 
       try {
         const text = await file.text();
@@ -86,28 +88,28 @@ export default function Backup() {
   };
 
   return (
-    <div className="bg-neutral-100 border-neutral-300 border rounded-xl p-4 hover:border-neutral-400 transition-all">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+      <div className="mb-2 flex items-center gap-2">
         <div className="text-neutral-700">
           <Upload size={18} />
         </div>
         <div>
-          <h2 className="font-semibold text-sm text-neutral-800">
+          <h2 className="font-semibold text-neutral-800 text-sm">
             Backup Settings
           </h2>
-          <p className="text-xs text-neutral-500 italic">
+          <p className="text-neutral-500 text-xs italic">
             Export or import your configuration
           </p>
         </div>
       </div>
 
       {importStatus === "success" && (
-        <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-2">
+        <div className="mb-2 rounded-lg border border-green-200 bg-green-50 p-2">
           <div className="flex items-center gap-1.5">
             <div className="text-green-500">
               <CheckCircle size={10} />
             </div>
-            <p className="text-xs text-green-700">
+            <p className="text-green-700 text-xs">
               Settings imported successfully!
             </p>
           </div>
@@ -115,12 +117,12 @@ export default function Backup() {
       )}
 
       {importStatus === "error" && (
-        <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-2">
+        <div className="mb-2 rounded-lg border border-red-200 bg-red-50 p-2">
           <div className="flex items-center gap-1.5">
             <div className="text-red-500">
               <XCircle size={10} />
             </div>
-            <p className="text-xs text-red-700">
+            <p className="text-red-700 text-xs">
               Import failed. Please try again with a valid backup file.
             </p>
           </div>
@@ -128,12 +130,12 @@ export default function Backup() {
       )}
 
       {exportStatus === "success" && (
-        <div className="p-2 bg-green-50 border border-green-200 rounded-lg mb-2">
+        <div className="mb-2 rounded-lg border border-green-200 bg-green-50 p-2">
           <div className="flex items-center gap-1.5">
             <div className="text-green-500">
               <CheckCircle size={10} />
             </div>
-            <p className="text-xs text-green-700">
+            <p className="text-green-700 text-xs">
               Settings exported successfully!
             </p>
           </div>
@@ -141,12 +143,12 @@ export default function Backup() {
       )}
 
       {exportStatus === "error" && (
-        <div className="p-2 bg-red-50 border border-red-200 rounded-lg mb-2">
+        <div className="mb-2 rounded-lg border border-red-200 bg-red-50 p-2">
           <div className="flex items-center gap-1.5">
             <div className="text-red-500">
               <XCircle size={10} />
             </div>
-            <p className="text-xs text-red-700">
+            <p className="text-red-700 text-xs">
               Export failed. Please try again.
             </p>
           </div>
@@ -156,15 +158,15 @@ export default function Backup() {
       {isFirefox ? (
         <div className="flex gap-1.5">
           <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs transition-colors hover:bg-neutral-200"
             onClick={handleExport}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-xs hover:bg-neutral-200 transition-colors"
           >
             <Download size={12} />
             Export
           </button>
           <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-neutral-900 px-3 py-2 text-white text-xs transition-colors hover:bg-neutral-800"
             onClick={openBackupPage}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-900 text-white rounded-lg text-xs hover:bg-neutral-800 transition-colors"
           >
             <ExternalLink size={12} />
             Import
@@ -173,15 +175,15 @@ export default function Backup() {
       ) : (
         <div className="flex gap-1.5">
           <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs transition-colors hover:bg-neutral-200"
             onClick={handleExport}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-xs hover:bg-neutral-200 transition-colors"
           >
             <Download size={12} />
             Export
           </button>
           <button
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-neutral-300 bg-neutral-100 px-3 py-2 text-xs transition-colors hover:bg-neutral-200"
             onClick={handleImport}
-            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-neutral-100 border border-neutral-300 rounded-lg text-xs hover:bg-neutral-200 transition-colors"
           >
             <Upload size={12} />
             Import
