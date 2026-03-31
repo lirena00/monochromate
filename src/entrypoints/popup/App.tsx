@@ -1,23 +1,22 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
-import "./App.css";
-import Backup from "@/components/BackupCard";
-import Header from "@/components/Header";
-import GreyscaleToggleCard from "@/components/ToggleCard";
-import ExcludedSitesCard from "@/components/BlacklistCard";
-import ScheduleCard from "@/components/ScheduleCard";
-import IntensityCard from "@/components/IntensityCard";
-import WarningCard from "@/components/WarningCard";
-import Footer from "@/components/Footer";
-import BlacklistManagement from "@/components/BlacklistManagement";
-import TemporaryDisableCard from "@/components/TemporaryDisableCard";
-import SupportBanner from "@/components/SupportBanner";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import "./app.css";
 import { Loader2 } from "lucide-react";
+import Backup from "@/components/backup-card";
+import Footer from "@/components/footer";
+import Header from "@/components/header";
+import IntensityCard from "@/components/intensity-card";
+import ScheduleCard from "@/components/schedule-card";
+import SiteListCard from "@/components/site-list-card";
+import SiteListManagement from "@/components/site-list-management";
+import SupportBanner from "@/components/support-banner";
+import TemporaryDisableCard from "@/components/temporary-disable-card";
+import GreyscaleToggleCard from "@/components/toggle-card";
+import WarningCard from "@/components/warning-card";
 import {
   getDomainFromUrl,
-  getCurrentFullUrl,
+  isUrlInList,
   suggestUrlPattern,
-  urlMatchesPattern,
-} from "@/utils/urlUtils";
+} from "@/utils/url-utils";
 
 const useDebounce = (value: string, delay: number) => {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -41,6 +40,9 @@ export default function App() {
   const [intensity, setIntensity] = useState(100);
   const [blacklist, setBlacklist] = useState<string[]>([]);
   const [urlPatternBlacklist, setUrlPatternBlacklist] = useState<string[]>([]);
+  const [whitelist, setWhitelist] = useState<string[]>([]);
+  const [urlPatternWhitelist, setUrlPatternWhitelist] = useState<string[]>([]);
+  const [mode, setMode] = useState<"blacklist" | "whitelist">("blacklist");
   const [currentFullUrl, setCurrentFullUrl] = useState<string>("");
   const [mediaExceptionEnabled, setMediaExceptionEnabled] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -51,18 +53,26 @@ export default function App() {
   const [tempEndTime, setTempEndTime] = useState("");
   const [scheduleToggle, setScheduleToggle] = useState(false);
   const [isTemporaryDisabled, setIsTemporaryDisabled] = useState(false);
-  const [view, setView] = useState<"main" | "blacklist">("main");
+  const [view, setView] = useState<"main" | "sitelist">("main");
 
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const isCurrentUrlBlacklisted = useMemo(() => {
-    const domain = getDomainFromUrl(currentFullUrl || `https://${currentUrl}`);
-    const isDomainBlacklisted = blacklist.includes(domain);
-    const isPatternBlacklisted = urlPatternBlacklist.some((pattern) =>
-      urlMatchesPattern(currentFullUrl || `https://${currentUrl}`, pattern)
-    );
-    return isDomainBlacklisted || isPatternBlacklisted;
-  }, [blacklist, urlPatternBlacklist, currentUrl, currentFullUrl]);
+  // Check if current URL is in the active mode's list
+  const isCurrentUrlInActiveList = useMemo(() => {
+    const fullUrl = currentFullUrl || `https://${currentUrl}`;
+    if (mode === "blacklist") {
+      return isUrlInList(fullUrl, blacklist, urlPatternBlacklist);
+    }
+    return isUrlInList(fullUrl, whitelist, urlPatternWhitelist);
+  }, [
+    mode,
+    blacklist,
+    urlPatternBlacklist,
+    whitelist,
+    urlPatternWhitelist,
+    currentUrl,
+    currentFullUrl,
+  ]);
 
   const filteredBlacklist = useMemo(
     () =>
@@ -81,15 +91,17 @@ export default function App() {
     settings
       .getValue()
       .then((currentSettings) => {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
 
         setEnabled(currentSettings.enabled);
         setIntensity(currentSettings.intensity);
         setBlacklist(currentSettings.blacklist);
         setUrlPatternBlacklist(currentSettings.urlPatternBlacklist || []);
-        setMediaExceptionEnabled(
-          currentSettings.mediaExceptionEnabled ?? false
-        );
+        setWhitelist(currentSettings.whitelist || []);
+        setUrlPatternWhitelist(currentSettings.urlPatternWhitelist || []);
+        setMode(currentSettings.mode || "blacklist");
         setMediaExceptionEnabled(
           currentSettings.mediaExceptionEnabled ?? false
         );
@@ -113,7 +125,9 @@ export default function App() {
         setIntensity(newSettings.intensity);
         setBlacklist(newSettings.blacklist);
         setUrlPatternBlacklist(newSettings.urlPatternBlacklist || []);
-        setMediaExceptionEnabled(newSettings.mediaExceptionEnabled ?? false);
+        setWhitelist(newSettings.whitelist || []);
+        setUrlPatternWhitelist(newSettings.urlPatternWhitelist || []);
+        setMode(newSettings.mode || "blacklist");
         setMediaExceptionEnabled(newSettings.mediaExceptionEnabled ?? false);
         setStartMonochromate(newSettings.scheduleStart);
         setEndMonochromate(newSettings.scheduleEnd);
@@ -147,14 +161,18 @@ export default function App() {
   }, []);
 
   const toggleGreyscale = useCallback(() => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
     const newEnabled = !enabled;
     setEnabled(newEnabled);
     browser.runtime.sendMessage({ type: "toggleGreyscale", intensity });
   }, [enabled, intensity, loading]);
 
   const toggleMediaException = useCallback(() => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
     const newMediaExceptionEnabled = !mediaExceptionEnabled;
     setMediaExceptionEnabled(newMediaExceptionEnabled);
     browser.runtime.sendMessage({
@@ -165,8 +183,10 @@ export default function App() {
 
   const changeIntensity = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (loading) return;
-      const newIntensity = parseInt(e.target.value, 10);
+      if (loading) {
+        return;
+      }
+      const newIntensity = Number.parseInt(e.target.value, 10);
       setIntensity(newIntensity);
       browser.runtime.sendMessage({
         type: "setIntensity",
@@ -177,7 +197,9 @@ export default function App() {
   );
 
   const saveScheduleTimes = useCallback(() => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
     setStartMonochromate(tempStartTime);
     setEndMonochromate(tempEndTime);
     browser.runtime.sendMessage({
@@ -188,7 +210,9 @@ export default function App() {
   }, [tempStartTime, tempEndTime, loading]);
 
   const toggleSchedule = useCallback(() => {
-    if (loading) return;
+    if (loading) {
+      return;
+    }
     const newScheduleToggle = !scheduleToggle;
     setScheduleToggle(newScheduleToggle);
     browser.runtime.sendMessage({
@@ -197,104 +221,225 @@ export default function App() {
     });
   }, [scheduleToggle, loading]);
 
-  const addCurrentSite = useCallback(async () => {
-    if (loading || !currentUrl || isCurrentUrlBlacklisted) return;
-    const newBlacklist = [...blacklist, currentUrl];
-    browser.runtime.sendMessage({
-      type: "setBlacklist",
-      value: newBlacklist,
-    });
-  }, [currentUrl, blacklist, loading, isCurrentUrlBlacklisted]);
+  const handleModeChange = useCallback(
+    (newMode: "blacklist" | "whitelist") => {
+      if (loading || newMode === mode) {
+        return;
+      }
+      setMode(newMode);
+      browser.runtime.sendMessage({
+        type: "setMode",
+        value: newMode,
+      });
+    },
+    [mode, loading]
+  );
 
-  const addCurrentUrl = useCallback(async () => {
-    // Updated function
-    if (loading || !currentFullUrl || isCurrentUrlBlacklisted) return;
+  const addCurrentSite = useCallback(() => {
+    if (loading || !currentUrl || isCurrentUrlInActiveList) {
+      return;
+    }
+
+    if (mode === "blacklist") {
+      const newBlacklist = [...blacklist, currentUrl];
+      browser.runtime.sendMessage({
+        type: "setBlacklist",
+        value: newBlacklist,
+      });
+    } else {
+      const newWhitelist = [...whitelist, currentUrl];
+      browser.runtime.sendMessage({
+        type: "setWhitelist",
+        value: newWhitelist,
+      });
+    }
+  }, [
+    currentUrl,
+    blacklist,
+    whitelist,
+    mode,
+    loading,
+    isCurrentUrlInActiveList,
+  ]);
+
+  const addCurrentUrl = useCallback(() => {
+    if (loading || !currentFullUrl || isCurrentUrlInActiveList) {
+      return;
+    }
 
     const suggestedPattern = suggestUrlPattern(currentFullUrl);
-    const newUrlPatternBlacklist = [...urlPatternBlacklist, suggestedPattern];
 
-    browser.runtime.sendMessage({
-      type: "setUrlPatternBlacklist",
-      value: newUrlPatternBlacklist,
-    });
-  }, [currentFullUrl, urlPatternBlacklist, loading, isCurrentUrlBlacklisted]);
+    if (mode === "blacklist") {
+      const newUrlPatternBlacklist = [...urlPatternBlacklist, suggestedPattern];
+      browser.runtime.sendMessage({
+        type: "setUrlPatternBlacklist",
+        value: newUrlPatternBlacklist,
+      });
+    } else {
+      const newUrlPatternWhitelist = [...urlPatternWhitelist, suggestedPattern];
+      browser.runtime.sendMessage({
+        type: "setUrlPatternWhitelist",
+        value: newUrlPatternWhitelist,
+      });
+    }
+  }, [
+    currentFullUrl,
+    urlPatternBlacklist,
+    urlPatternWhitelist,
+    mode,
+    loading,
+    isCurrentUrlInActiveList,
+  ]);
 
   const removeSite = useCallback(
-    (site: string, type: "domain" | "pattern" = "domain") => {
-      // Updated function
-      if (loading) return;
+    (
+      site: string,
+      type: "domain" | "pattern" = "domain",
+      targetMode: "blacklist" | "whitelist" = mode
+    ) => {
+      if (loading) {
+        return;
+      }
 
-      if (type === "domain") {
-        const newBlacklist = blacklist.filter((s) => s !== site);
+      if (targetMode === "blacklist") {
+        if (type === "domain") {
+          const newBlacklist = blacklist.filter((s) => s !== site);
+          browser.runtime.sendMessage({
+            type: "setBlacklist",
+            value: newBlacklist,
+          });
+        } else {
+          const newUrlPatternBlacklist = urlPatternBlacklist.filter(
+            (s) => s !== site
+          );
+          browser.runtime.sendMessage({
+            type: "setUrlPatternBlacklist",
+            value: newUrlPatternBlacklist,
+          });
+        }
+      } else if (type === "domain") {
+        const newWhitelist = whitelist.filter((s) => s !== site);
         browser.runtime.sendMessage({
-          type: "setBlacklist",
-          value: newBlacklist,
+          type: "setWhitelist",
+          value: newWhitelist,
         });
       } else {
-        const newUrlPatternBlacklist = urlPatternBlacklist.filter(
+        const newUrlPatternWhitelist = urlPatternWhitelist.filter(
           (s) => s !== site
         );
         browser.runtime.sendMessage({
-          type: "setUrlPatternBlacklist",
-          value: newUrlPatternBlacklist,
+          type: "setUrlPatternWhitelist",
+          value: newUrlPatternWhitelist,
         });
       }
     },
-    [blacklist, urlPatternBlacklist, loading]
+    [
+      blacklist,
+      urlPatternBlacklist,
+      whitelist,
+      urlPatternWhitelist,
+      mode,
+      loading,
+    ]
+  );
+
+  const handleBulkImport = useCallback(
+    (
+      sites: string[],
+      type: "domain" | "pattern",
+      targetMode: "blacklist" | "whitelist"
+    ) => {
+      if (loading) {
+        return;
+      }
+
+      if (targetMode === "blacklist") {
+        if (type === "domain") {
+          const newBlacklist = [...new Set([...blacklist, ...sites])];
+          browser.runtime.sendMessage({
+            type: "setBlacklist",
+            value: newBlacklist,
+          });
+        } else {
+          const newUrlPatternBlacklist = [
+            ...new Set([...urlPatternBlacklist, ...sites]),
+          ];
+          browser.runtime.sendMessage({
+            type: "setUrlPatternBlacklist",
+            value: newUrlPatternBlacklist,
+          });
+        }
+      } else if (type === "domain") {
+        const newWhitelist = [...new Set([...whitelist, ...sites])];
+        browser.runtime.sendMessage({
+          type: "setWhitelist",
+          value: newWhitelist,
+        });
+      } else {
+        const newUrlPatternWhitelist = [
+          ...new Set([...urlPatternWhitelist, ...sites]),
+        ];
+        browser.runtime.sendMessage({
+          type: "setUrlPatternWhitelist",
+          value: newUrlPatternWhitelist,
+        });
+      }
+    },
+    [blacklist, urlPatternBlacklist, whitelist, urlPatternWhitelist, loading]
   );
   const handleReturnToMain = useCallback(() => {
     setView("main");
     setSearchTerm("");
   }, []);
 
-  return (
-    <div className="w-[420px] min-h-[800px] bg-white text-neutral-800 p-6 flex flex-col">
-      {loading ? (
-        <div className="flex justify-center items-center flex-1">
-          <Loader2 size={24} className="animate-spin" />
-        </div>
-      ) : view === "main" ? (
+  const renderContent = () => {
+    if (view === "main") {
+      return (
         <>
           <Header />
 
-          <div className="grid grid-cols-1 gap-4 flex-1">
+          <div className="grid flex-1 grid-cols-1 gap-4">
             <WarningCard currentUrl={currentUrl} />
             <SupportBanner />
             <GreyscaleToggleCard
               enabled={enabled}
-              onToggle={toggleGreyscale}
               isTemporaryDisabled={isTemporaryDisabled}
+              onToggle={toggleGreyscale}
             />
             <TemporaryDisableCard
               enabled={enabled}
               onTemporaryStateChange={setIsTemporaryDisabled}
             />
-            <ExcludedSitesCard
-              currentUrl={currentUrl}
-              currentFullUrl={currentFullUrl}
+            <SiteListCard
               blacklist={blacklist}
-              urlPatternBlacklist={urlPatternBlacklist}
-              isCurrentUrlBlacklisted={isCurrentUrlBlacklisted}
+              currentFullUrl={currentFullUrl}
+              currentUrl={currentUrl}
+              isCurrentUrlInActiveList={isCurrentUrlInActiveList}
+              mode={mode}
               onAddCurrentSite={addCurrentSite}
               onAddCurrentUrl={addCurrentUrl}
+              onManageAllSites={() => setView("sitelist")}
+              onModeChange={handleModeChange}
               onRemoveSite={removeSite}
-              onManageAllSites={() => setView("blacklist")}
+              urlPatternBlacklist={urlPatternBlacklist}
+              urlPatternWhitelist={urlPatternWhitelist}
+              whitelist={whitelist}
             />
             <ScheduleCard
-              scheduleToggle={scheduleToggle}
-              tempStartTime={tempStartTime}
-              tempEndTime={tempEndTime}
-              startMonochromate={startMonochromate}
               endMonochromate={endMonochromate}
-              onToggleSchedule={toggleSchedule}
-              onStartTimeChange={setTempStartTime}
               onEndTimeChange={setTempEndTime}
               onSaveSchedule={saveScheduleTimes}
+              onStartTimeChange={setTempStartTime}
+              onToggleSchedule={toggleSchedule}
+              scheduleToggle={scheduleToggle}
+              startMonochromate={startMonochromate}
+              tempEndTime={tempEndTime}
+              tempStartTime={tempStartTime}
             />
 
             <IntensityCard
-              intensity={intensity}
               enabled={enabled}
+              intensity={intensity}
               onIntensityChange={changeIntensity}
             />
 
@@ -303,23 +448,41 @@ export default function App() {
 
           <Footer />
         </>
+      );
+    }
+
+    return (
+      <SiteListManagement
+        blacklist={blacklist}
+        currentFullUrl={currentFullUrl}
+        currentUrl={currentUrl}
+        filteredBlacklist={filteredBlacklist}
+        isCurrentUrlInActiveList={isCurrentUrlInActiveList}
+        mediaExceptionEnabled={mediaExceptionEnabled}
+        mode={mode}
+        onAddCurrentSite={addCurrentSite}
+        onAddCurrentUrl={addCurrentUrl}
+        onBulkImport={handleBulkImport}
+        onRemoveSite={removeSite}
+        onReturnToMain={handleReturnToMain}
+        onSearchChange={setSearchTerm}
+        onToggleMediaException={toggleMediaException}
+        searchTerm={searchTerm}
+        urlPatternBlacklist={urlPatternBlacklist}
+        urlPatternWhitelist={urlPatternWhitelist}
+        whitelist={whitelist}
+      />
+    );
+  };
+
+  return (
+    <div className="flex min-h-[800px] w-[420px] flex-col bg-white p-6 text-neutral-800">
+      {loading ? (
+        <div className="flex flex-1 items-center justify-center">
+          <Loader2 className="animate-spin" size={24} />
+        </div>
       ) : (
-        <BlacklistManagement
-          searchTerm={searchTerm}
-          currentUrl={currentUrl}
-          currentFullUrl={currentFullUrl}
-          blacklist={blacklist}
-          urlPatternBlacklist={urlPatternBlacklist}
-          filteredBlacklist={filteredBlacklist}
-          isCurrentUrlBlacklisted={isCurrentUrlBlacklisted}
-          onSearchChange={setSearchTerm}
-          onReturnToMain={handleReturnToMain}
-          onAddCurrentSite={addCurrentSite}
-          onAddCurrentUrl={addCurrentUrl}
-          onRemoveSite={removeSite}
-          mediaExceptionEnabled={mediaExceptionEnabled}
-          onToggleMediaException={toggleMediaException}
-        />
+        renderContent()
       )}
     </div>
   );

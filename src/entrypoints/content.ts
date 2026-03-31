@@ -1,10 +1,10 @@
-import { ContentScriptContext } from "#imports";
+import type { ContentScriptContext } from "#imports";
 import {
-  isDirectMediaUrl,
-  isMediaOnlyPage,
   clearMediaCheckCache,
-} from "@/utils/MediaCheckUtil";
-import { shouldExcludeUrl, getDomainFromUrl } from "@/utils/urlUtils";
+  isMediaOnlyPage,
+} from "@/utils/media-check-util";
+import { shouldApplyFilter } from "@/utils/url-utils";
+
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
 };
@@ -17,8 +17,11 @@ let overlayElement: HTMLDivElement | null = null;
 let currentSettings = {
   enabled: false,
   intensity: 100,
+  mode: "blacklist" as "blacklist" | "whitelist",
   blacklist: [] as string[],
   urlPatternBlacklist: [] as string[],
+  whitelist: [] as string[],
+  urlPatternWhitelist: [] as string[],
   temporaryDisable: false,
   temporaryDisableUntil: null as number | null,
   imageExceptionEnabled: false,
@@ -63,9 +66,11 @@ const getMediaOnlyStatus = (): boolean => {
   return cachedMediaOnlyResult;
 };
 
-const updateOverlay = (show: boolean, intensity: number = 100) => {
+const updateOverlay = (show: boolean, intensity = 100) => {
   if (show && !isFullscreenActive && !currentSettings.temporaryDisable) {
-    if (!overlayElement) {
+    if (overlayElement) {
+      overlayElement.style.backdropFilter = `grayscale(${intensity}%)`;
+    } else {
       overlayElement = document.createElement("div");
       overlayElement.id = "monochromate-overlay";
       overlayElement.style.cssText = `
@@ -79,8 +84,6 @@ const updateOverlay = (show: boolean, intensity: number = 100) => {
         backdrop-filter: grayscale(${intensity}%);
       `;
       document.documentElement.appendChild(overlayElement);
-    } else {
-      overlayElement.style.backdropFilter = `grayscale(${intensity}%)`;
     }
   } else if (overlayElement) {
     overlayElement.remove();
@@ -104,23 +107,28 @@ const removeFullscreenGreyscale = (element: Element) => {
 
 const getFullscreenElement = (): Element | null => {
   return (
-    document.fullscreenElement || (document as any).webkitFullscreenElement
+    document.fullscreenElement ||
+    (document as Document & { webkitFullscreenElement?: Element })
+      .webkitFullscreenElement ||
+    null
   );
 };
 
 const shouldApplyGrayscale = (): boolean => {
   const currentUrl = getCurrentUrl();
-  const isExcluded = shouldExcludeUrl(
-    currentUrl,
-    currentSettings.blacklist,
-    currentSettings.urlPatternBlacklist
-  );
+  const shouldApply = shouldApplyFilter(currentUrl, {
+    mode: currentSettings.mode || "blacklist",
+    blacklist: currentSettings.blacklist || [],
+    urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+    whitelist: currentSettings.whitelist || [],
+    urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+  });
   const isMediaOnly = getMediaOnlyStatus();
   const isMediaException = isMediaOnly && currentSettings.imageExceptionEnabled;
   return (
     currentSettings.enabled &&
     !currentSettings.temporaryDisable &&
-    !isExcluded &&
+    shouldApply &&
     !isMediaException
   );
 };
@@ -148,14 +156,15 @@ const handleFullscreenChange = () => {
     updateOverlay(false);
   } else if (wasFullscreen) {
     // Clean up any fullscreen grayscale
-    document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
+    const grayscaleElements = document.querySelectorAll('[style*="grayscale"]');
+    for (const element of grayscaleElements) {
       if (
         element instanceof HTMLElement &&
         element.style.filter.includes("grayscale")
       ) {
         removeFullscreenGreyscale(element);
       }
-    });
+    }
   }
 
   // Apply effect immediately without debounce for fullscreen changes
@@ -177,7 +186,9 @@ const setupMutationObserver = () => {
           ...mutation.addedNodes,
           ...mutation.removedNodes,
         ].some((node) => {
-          if (!(node instanceof Element)) return false;
+          if (!(node instanceof Element)) {
+            return false;
+          }
           return (
             node.tagName === "IMG" ||
             node.tagName === "VIDEO" ||
@@ -219,8 +230,11 @@ export default defineContentScript({
     currentSettings = {
       enabled: initialSettings.enabled,
       intensity: initialSettings.intensity,
+      mode: initialSettings.mode || "blacklist",
       blacklist: initialSettings.blacklist,
       urlPatternBlacklist: initialSettings.urlPatternBlacklist || [],
+      whitelist: initialSettings.whitelist || [],
+      urlPatternWhitelist: initialSettings.urlPatternWhitelist || [],
       imageExceptionEnabled: initialSettings.mediaExceptionEnabled,
       temporaryDisable: initialSettings.temporaryDisable,
       temporaryDisableUntil: initialSettings.temporaryDisableUntil,
@@ -245,8 +259,11 @@ export default defineContentScript({
         currentSettings = {
           enabled: newSettings.enabled,
           intensity: newSettings.intensity,
+          mode: newSettings.mode || "blacklist",
           blacklist: newSettings.blacklist,
           urlPatternBlacklist: newSettings.urlPatternBlacklist || [],
+          whitelist: newSettings.whitelist || [],
+          urlPatternWhitelist: newSettings.urlPatternWhitelist || [],
           temporaryDisable: newSettings.temporaryDisable,
           temporaryDisableUntil: newSettings.temporaryDisableUntil,
           imageExceptionEnabled: newSettings.mediaExceptionEnabled,
@@ -273,9 +290,9 @@ export default defineContentScript({
       }
     });
 
-    ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
+    for (const event of ["fullscreenchange", "webkitfullscreenchange"]) {
       document.addEventListener(event, handleFullscreenChange);
-    });
+    }
 
     // Clear cache on navigation
     const handleNavigation = () => {
@@ -287,9 +304,9 @@ export default defineContentScript({
     window.addEventListener("popstate", handleNavigation);
 
     ctx.onInvalidated(() => {
-      ["fullscreenchange", "webkitfullscreenchange"].forEach((event) => {
+      for (const event of ["fullscreenchange", "webkitfullscreenchange"]) {
         document.removeEventListener(event, handleFullscreenChange);
-      });
+      }
 
       window.removeEventListener("load", initializeGrayscale);
       window.removeEventListener("beforeunload", handleNavigation);
@@ -303,14 +320,14 @@ export default defineContentScript({
         overlayElement.remove();
         overlayElement = null;
       }
-      document.querySelectorAll('[style*="grayscale"]').forEach((element) => {
+      for (const element of document.querySelectorAll('[style*="grayscale"]')) {
         if (
           element instanceof HTMLElement &&
           element.style.filter.includes("grayscale")
         ) {
           removeFullscreenGreyscale(element);
         }
-      });
+      }
       unwatchSettings();
       clearMediaCheckCache();
     });

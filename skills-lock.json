@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "skills": {
+    "ultracite": {
+      "source": "haydenbleasel/ultracite",
+      "sourceType": "github",
+      "computedHash": "cdea4de1603b112edabacb3d1dc5fc4d8b868f19b0385873da2c31cca6098c38"
+    },
+    "wxt-browser-extensions": {
+      "source": "pproenca/dot-skills",
+      "sourceType": "github",
+      "computedHash": "6c3f7488a0b0dc3805d8f2d2cd2ebb61c32e620c8b1a26eb4663b0f115a87bcc"
+    }
+  }
+}

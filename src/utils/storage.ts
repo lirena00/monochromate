@@ -1,34 +1,54 @@
-type MonofilterTypes_prev = {
+import { storage } from "#imports";
+
+interface MonofilterTypes_v1 {
+  blacklist: string[];
   enabled: boolean;
   intensity: number;
-  blacklist: string[];
-  scheduleStart: string;
-  scheduleEnd: string;
   schedule: boolean;
-};
-type MonofilterTypes_prev2 = {
+  scheduleEnd: string;
+  scheduleStart: string;
+}
+
+interface MonofilterTypes_v2 {
+  blacklist: string[];
   enabled: boolean;
   intensity: number;
-  blacklist: string[];
-  scheduleStart: string;
-  scheduleEnd: string;
+  mediaExceptionEnabled: boolean;
   schedule: boolean;
+  scheduleEnd: string;
+  scheduleStart: string;
   temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
-  mediaExceptionEnabled: boolean;
-};
-type MonofilterTypes = {
+}
+
+interface MonofilterTypes_v3 {
+  blacklist: string[];
   enabled: boolean;
   intensity: number;
-  blacklist: string[];
-  urlPatternBlacklist: string[]; // New: specific URL exclusions
-  scheduleStart: string;
-  scheduleEnd: string;
+  mediaExceptionEnabled: boolean;
   schedule: boolean;
+  scheduleEnd: string;
+  scheduleStart: string;
   temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
+  urlPatternBlacklist: string[];
+}
+
+interface MonofilterTypes {
+  blacklist: string[];
+  enabled: boolean;
+  intensity: number;
   mediaExceptionEnabled: boolean;
-};
+  mode: "blacklist" | "whitelist";
+  schedule: boolean;
+  scheduleEnd: string;
+  scheduleStart: string;
+  temporaryDisable: boolean;
+  temporaryDisableUntil: number | null;
+  urlPatternBlacklist: string[];
+  urlPatternWhitelist: string[];
+  whitelist: string[];
+}
 
 export const settings = storage.defineItem<MonofilterTypes>(
   "local:Monofilter",
@@ -38,6 +58,9 @@ export const settings = storage.defineItem<MonofilterTypes>(
       intensity: 100,
       blacklist: ["localhost"],
       urlPatternBlacklist: [],
+      whitelist: [],
+      urlPatternWhitelist: [],
+      mode: "blacklist",
       scheduleStart: "17:00",
       scheduleEnd: "09:00",
       schedule: false,
@@ -45,9 +68,9 @@ export const settings = storage.defineItem<MonofilterTypes>(
       temporaryDisableUntil: null,
       mediaExceptionEnabled: false,
     },
-    version: 3,
+    version: 4,
     migrations: {
-      2: (oldValue: MonofilterTypes_prev): MonofilterTypes_prev2 => {
+      2: (oldValue: MonofilterTypes_v1): MonofilterTypes_v2 => {
         return {
           ...oldValue,
           temporaryDisable: false,
@@ -55,10 +78,18 @@ export const settings = storage.defineItem<MonofilterTypes>(
           mediaExceptionEnabled: false,
         };
       },
-      3: (oldValue: MonofilterTypes_prev2): MonofilterTypes => {
+      3: (oldValue: MonofilterTypes_v2): MonofilterTypes_v3 => {
         return {
           ...oldValue,
           urlPatternBlacklist: [],
+        };
+      },
+      4: (oldValue: MonofilterTypes_v3): MonofilterTypes => {
+        return {
+          ...oldValue,
+          mode: "blacklist",
+          whitelist: [],
+          urlPatternWhitelist: [],
         };
       },
     },

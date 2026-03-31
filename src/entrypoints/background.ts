@@ -1,14 +1,16 @@
-import { isMediaOnlyPage } from "@/utils/MediaCheckUtil";
+import { browser } from "#imports";
+import { isMediaOnlyPage } from "@/utils/media-check-util";
 import { settings } from "@/utils/storage";
-import { shouldExcludeUrl, getDomainFromUrl } from "@/utils/urlUtils";
+import {
+  getDomainFromUrl,
+  isUrlInList,
+  shouldApplyFilter,
+} from "@/utils/url-utils";
 
 export default defineBackground(() => {
   let settingsInitialized = false;
 
-  const updateBadge = (
-    enabled: boolean,
-    temporaryDisabled: boolean = false
-  ) => {
+  const updateBadge = (enabled: boolean, temporaryDisabled = false) => {
     if (temporaryDisabled) {
       browser.action.setBadgeText({ text: "❚❚" });
       browser.action.setBadgeBackgroundColor({ color: "#f5f5f5" });
@@ -21,177 +23,119 @@ export default defineBackground(() => {
   };
 
   // Debounce helper to prevent too frequent tab updates
-  const debounce = (func: Function, wait: number) => {
+  const debounce = (func: (...args: unknown[]) => unknown, wait: number) => {
     let timeout: number | undefined;
-    return (...args: any[]) => {
+    return (...args: unknown[]) => {
       clearTimeout(timeout);
       timeout = setTimeout(() => func(...args), wait) as unknown as number;
     };
   };
 
-  const getHostname = (url: string): string => {
-    try {
-      return new URL(url).hostname.replace("www.", "");
-    } catch {
-      return "";
-    }
-  };
-
-  const getFullscreenElement = (): Element | null => {
-    return (
-      document.fullscreenElement || (document as any).webkitFullscreenElement
-    );
-  };
-
-  // Function to determine if grayscale should be applied
+  // Function to determine if grayscale should be applied (mode-aware)
   const shouldApplyGrayscale = (
     url: string,
     isMediaOnly: boolean,
-    settings: any
+    currentSettings: Settings
   ): boolean => {
-    const isExcluded = shouldExcludeUrl(
-      url,
-      settings.blacklist,
-      settings.urlBlacklist || []
-    );
+    const shouldApply = shouldApplyFilter(url, {
+      mode: currentSettings.mode || "blacklist",
+      blacklist: currentSettings.blacklist || [],
+      urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+      whitelist: currentSettings.whitelist || [],
+      urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+    });
 
     return (
-      settings.enabled &&
-      url &&
-      !isExcluded &&
-      !(isMediaOnly && settings.imageExceptionEnabled)
+      currentSettings.enabled &&
+      !!url &&
+      shouldApply &&
+      !(isMediaOnly && currentSettings.mediaExceptionEnabled)
     );
   };
 
-  // Debounced version of applyGreyscale
-  const applyGreyscaleToAllTabsDebounced = debounce(
-    (
-      intensity: number = 100,
-      blacklist: string[] = [],
-      urlPatternBlacklist: string[] = [],
-      imageExceptionEnabled: boolean = false
-    ) => {
-      browser.tabs.query({}).then((tabs) => {
-        const tabsToUpdate = tabs.filter((tab) => {
-          if (!tab.id || !tab.url) return false;
-          return !shouldExcludeUrl(tab.url, blacklist, urlPatternBlacklist); // Updated
+  const injectGreyscaleOverlay = (tabId: number, intensity: number) => {
+    browser.scripting
+      .executeScript({
+        target: { tabId },
+        func: (intensityArg: number) => {
+          const fsEl =
+            document.fullscreenElement ||
+            (document as Document & { webkitFullscreenElement?: Element })
+              .webkitFullscreenElement ||
+            null;
+          if (fsEl instanceof HTMLElement) {
+            fsEl.style.filter = `grayscale(${intensityArg}%)`;
+            fsEl.style.transition = "filter 0.2s ease";
+          } else {
+            let overlay = document.getElementById("monochromate-overlay");
+            if (overlay) {
+              overlay.style.backdropFilter = `grayscale(${intensityArg}%)`;
+            } else {
+              overlay = document.createElement("div");
+              overlay.id = "monochromate-overlay";
+              overlay.style.cssText = `position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483647;backdrop-filter:grayscale(${intensityArg}%)`;
+              document.documentElement.appendChild(overlay);
+            }
+          }
+        },
+        args: [intensity],
+      })
+      .catch(() => {
+        // Silently fail for tabs that can't be modified
+      });
+  };
+
+  const applyGreyscaleToTab = (
+    tabId: number,
+    tabUrl: string,
+    currentSettings: Settings
+  ) => {
+    const intensity = currentSettings.intensity || 100;
+    browser.scripting
+      .executeScript({ target: { tabId }, func: isMediaOnlyPage })
+      .then((results) => {
+        const isMediaOnly = results?.[0]?.result ?? false;
+        if (
+          shouldApplyGrayscale(tabUrl, isMediaOnly, {
+            ...currentSettings,
+            mediaExceptionEnabled: currentSettings.mediaExceptionEnabled,
+          })
+        ) {
+          injectGreyscaleOverlay(tabId, intensity);
+        }
+      })
+      .catch(() => {
+        // If media detection fails, apply greyscale anyway
+        const shouldApply = shouldApplyFilter(tabUrl, {
+          mode: currentSettings.mode || "blacklist",
+          blacklist: currentSettings.blacklist || [],
+          urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+          whitelist: currentSettings.whitelist || [],
+          urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
         });
+        if (shouldApply) {
+          injectGreyscaleOverlay(tabId, intensity);
+        }
+      });
+  };
 
-        // Batch process tabs that need updating
-        if (tabsToUpdate.length > 0) {
-          for (const tab of tabsToUpdate) {
-            if (tab.id) {
-              const domain = getHostname(tab.url || "");
+  // Debounced version of applyGreyscale (mode-aware)
+  const applyGreyscaleToAllTabsDebounced = debounce(
+    (settingsArg: unknown) => {
+      const currentSettings = settingsArg as Settings;
 
-              // Check if it's a media-only page
-              browser.scripting
-                .executeScript({
-                  target: { tabId: tab.id },
-                  func: isMediaOnlyPage,
-                })
-                .then((results) => {
-                  const isMediaOnly = results?.[0]?.result || false;
-
-                  if (
-                    !shouldApplyGrayscale(domain, isMediaOnly, {
-                      enabled: true,
-                      blacklist,
-                      imageExceptionEnabled,
-                    })
-                  ) {
-                    return;
-                  }
-
-                  // Apply greyscale
-                  browser.scripting
-                    .executeScript({
-                      target: { tabId: tab.id! },
-                      func: (intensity: number) => {
-                        const fullscreenElement = getFullscreenElement();
-
-                        if (
-                          fullscreenElement &&
-                          fullscreenElement instanceof HTMLElement
-                        ) {
-                          fullscreenElement.style.filter = `grayscale(${intensity}%)`;
-                          fullscreenElement.style.transition =
-                            "filter 0.2s ease";
-                        } else {
-                          let overlay = document.getElementById(
-                            "monochromate-overlay"
-                          );
-                          if (!overlay) {
-                            overlay = document.createElement("div");
-                            overlay.id = "monochromate-overlay";
-                            overlay.style.cssText = `
-                            position: fixed;
-                            top: 0;
-                            left: 0;
-                            width: 100vw;
-                            height: 100vh;
-                            pointer-events: none;
-                            z-index: 2147483647;
-                            backdrop-filter: grayscale(${intensity}%);
-                          `;
-                            document.documentElement.appendChild(overlay);
-                          } else {
-                            overlay.style.backdropFilter = `grayscale(${intensity}%)`;
-                          }
-                        }
-                      },
-                      args: [intensity],
-                    })
-                    .catch(() => {
-                      // Silently fail for tabs that can't be modified
-                    });
-                })
-                .catch(() => {
-                  // If image detection fails, apply greyscale normally
-                  const domain = getHostname(tab.url || "");
-                  if (!blacklist.includes(domain)) {
-                    browser.scripting
-                      .executeScript({
-                        target: { tabId: tab.id! },
-                        func: (intensity: number) => {
-                          const fullscreenElement = getFullscreenElement();
-
-                          if (
-                            fullscreenElement &&
-                            fullscreenElement instanceof HTMLElement
-                          ) {
-                            fullscreenElement.style.filter = `grayscale(${intensity}%)`;
-                            fullscreenElement.style.transition =
-                              "filter 0.2s ease";
-                          } else {
-                            let overlay = document.getElementById(
-                              "monochromate-overlay"
-                            );
-                            if (!overlay) {
-                              overlay = document.createElement("div");
-                              overlay.id = "monochromate-overlay";
-                              overlay.style.cssText = `
-                              position: fixed;
-                              top: 0;
-                              left: 0;
-                              width: 100vw;
-                              height: 100vh;
-                              pointer-events: none;
-                              z-index: 2147483647;
-                              backdrop-filter: grayscale(${intensity}%);
-                            `;
-                              document.documentElement.appendChild(overlay);
-                            } else {
-                              overlay.style.backdropFilter = `grayscale(${intensity}%)`;
-                            }
-                          }
-                        },
-                        args: [intensity],
-                      })
-                      .catch(() => {
-                        // Silently fail
-                      });
-                  }
-                });
+      browser.tabs.query({}).then((tabs) => {
+        for (const tab of tabs) {
+          if (tab.id && tab.url) {
+            const shouldApply = shouldApplyFilter(tab.url, {
+              mode: currentSettings.mode || "blacklist",
+              blacklist: currentSettings.blacklist || [],
+              urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+              whitelist: currentSettings.whitelist || [],
+              urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+            });
+            if (shouldApply) {
+              applyGreyscaleToTab(tab.id, tab.url, currentSettings);
             }
           }
         }
@@ -214,17 +158,17 @@ export default defineBackground(() => {
                   overlay.remove();
                 }
 
-                document
-                  .querySelectorAll('[style*="grayscale"]')
-                  .forEach((element) => {
-                    if (
-                      element instanceof HTMLElement &&
-                      element.style.filter.includes("grayscale")
-                    ) {
-                      element.style.filter = "";
-                      element.style.transition = "";
-                    }
-                  });
+                for (const element of document.querySelectorAll(
+                  '[style*="grayscale"]'
+                )) {
+                  if (
+                    element instanceof HTMLElement &&
+                    element.style.filter.includes("grayscale")
+                  ) {
+                    element.style.filter = "";
+                    element.style.transition = "";
+                  }
+                }
               },
             })
             .catch(() => {
@@ -277,11 +221,7 @@ export default defineBackground(() => {
       });
 
       if (currentSettings.enabled) {
-        applyGreyscaleToAllTabsDebounced(
-          currentSettings.intensity,
-          currentSettings.blacklist,
-          currentSettings.mediaExceptionEnabled
-        );
+        applyGreyscaleToAllTabsDebounced(currentSettings);
       }
       updateBadge(currentSettings.enabled, false);
     } catch (error) {
@@ -360,11 +300,7 @@ export default defineBackground(() => {
       if (currentSettings.enabled && !currentSettings.temporaryDisable) {
         updateBadge(currentSettings.enabled);
 
-        applyGreyscaleToAllTabsDebounced(
-          currentSettings.intensity,
-          currentSettings.blacklist,
-          currentSettings.mediaExceptionEnabled
-        );
+        applyGreyscaleToAllTabsDebounced(currentSettings);
       }
       settingsInitialized = true;
       updateScheduleAlarm();
@@ -373,8 +309,35 @@ export default defineBackground(() => {
     }
   };
 
-  const unwatchSettings = settings.watch((newSettings, oldSettings) => {
-    if (!settingsInitialized) return;
+  const handleListOrModeChange = (
+    newSettings: Settings | null,
+    oldSettings: Settings | null
+  ) => {
+    if (!newSettings?.enabled) {
+      return;
+    }
+    const listsChanged =
+      JSON.stringify(newSettings.blacklist) !==
+        JSON.stringify(oldSettings?.blacklist) ||
+      JSON.stringify(newSettings.whitelist) !==
+        JSON.stringify(oldSettings?.whitelist) ||
+      JSON.stringify(newSettings.urlPatternBlacklist) !==
+        JSON.stringify(oldSettings?.urlPatternBlacklist) ||
+      JSON.stringify(newSettings.urlPatternWhitelist) !==
+        JSON.stringify(oldSettings?.urlPatternWhitelist);
+    const modeChanged = newSettings.mode !== oldSettings?.mode;
+    const mediaChanged =
+      newSettings.mediaExceptionEnabled !== oldSettings?.mediaExceptionEnabled;
+    const intensityChanged = newSettings.intensity !== oldSettings?.intensity;
+    if (listsChanged || modeChanged || mediaChanged || intensityChanged) {
+      applyGreyscaleToAllTabsDebounced(newSettings);
+    }
+  };
+
+  const _unwatchSettings = settings.watch((newSettings, oldSettings) => {
+    if (!settingsInitialized) {
+      return;
+    }
 
     if (newSettings?.enabled !== oldSettings?.enabled) {
       updateBadge(
@@ -383,50 +346,13 @@ export default defineBackground(() => {
       );
 
       if (newSettings?.enabled) {
-        applyGreyscaleToAllTabsDebounced(
-          newSettings.intensity,
-          newSettings.blacklist,
-          newSettings.mediaExceptionEnabled
-        );
+        applyGreyscaleToAllTabsDebounced(newSettings);
       } else {
         disableGreyscaleForAllTabs();
       }
     }
 
-    if (
-      newSettings?.intensity !== oldSettings?.intensity &&
-      newSettings?.enabled
-    ) {
-      applyGreyscaleToAllTabsDebounced(
-        newSettings.intensity,
-        newSettings.blacklist,
-        newSettings.mediaExceptionEnabled
-      );
-    }
-
-    if (
-      JSON.stringify(newSettings?.blacklist) !==
-        JSON.stringify(oldSettings?.blacklist) &&
-      newSettings?.enabled
-    ) {
-      applyGreyscaleToAllTabsDebounced(
-        newSettings.intensity,
-        newSettings.blacklist,
-        newSettings.mediaExceptionEnabled
-      );
-    }
-
-    if (
-      newSettings?.mediaExceptionEnabled !==
-        oldSettings?.mediaExceptionEnabled &&
-      newSettings?.enabled
-    ) {
-      applyGreyscaleToAllTabsDebounced(
-        newSettings.intensity,
-        newSettings.blacklist,
-        newSettings.mediaExceptionEnabled
-      );
-    }
+    handleListOrModeChange(newSettings ?? null, oldSettings ?? null);
 
     if (newSettings?.temporaryDisable !== oldSettings?.temporaryDisable) {
       updateBadge(
@@ -449,7 +375,9 @@ export default defineBackground(() => {
   const updateScheduleAlarm = async () => {
     const currentSettings = await settings.getValue();
     browser.alarms.clear("StartMonochromate").then(() => {
-      if (!currentSettings.scheduleStart) return;
+      if (!currentSettings.scheduleStart) {
+        return;
+      }
       const [startHours, startMinutes] = currentSettings.scheduleStart
         .split(":")
         .map(Number);
@@ -461,7 +389,9 @@ export default defineBackground(() => {
     });
 
     browser.alarms.clear("EndMonochromate").then(() => {
-      if (!currentSettings.scheduleEnd) return;
+      if (!currentSettings.scheduleEnd) {
+        return;
+      }
       const [endHours, endMinutes] = currentSettings.scheduleEnd
         .split(":")
         .map(Number);
@@ -537,7 +467,7 @@ export default defineBackground(() => {
   browser.runtime.onMessage.addListener(async (message) => {
     const currentSettings = await settings.getValue();
     switch (message.type) {
-      case "toggleGreyscale":
+      case "toggleGreyscale": {
         // Clear temporary disable when manually toggling
         await browser.alarms.clear("EndTemporaryDisable");
         const newEnabled = !currentSettings.enabled;
@@ -549,6 +479,7 @@ export default defineBackground(() => {
         });
         updateBadge(newEnabled, false);
         break;
+      }
       case "setIntensity":
         await settings.setValue({
           ...currentSettings,
@@ -561,10 +492,28 @@ export default defineBackground(() => {
           blacklist: message.value,
         });
         break;
-      case "setUrlPatternBlacklist": // Updated case name
+      case "setUrlPatternBlacklist":
         await settings.setValue({
           ...currentSettings,
           urlPatternBlacklist: message.value,
+        });
+        break;
+      case "setWhitelist":
+        await settings.setValue({
+          ...currentSettings,
+          whitelist: message.value,
+        });
+        break;
+      case "setUrlPatternWhitelist":
+        await settings.setValue({
+          ...currentSettings,
+          urlPatternWhitelist: message.value,
+        });
+        break;
+      case "setMode":
+        await settings.setValue({
+          ...currentSettings,
+          mode: message.value,
         });
         break;
       case "toggleMediaException":
@@ -595,14 +544,76 @@ export default defineBackground(() => {
       case "cancelTemporaryDisable":
         await cancelTemporaryDisable();
         break;
+      default:
+        break;
     }
   });
+
+  const toggleBlacklistForUrl = (
+    currentUrl: string,
+    domain: string,
+    currentSettings: Settings
+  ) => {
+    const isInBlacklist = isUrlInList(
+      currentUrl,
+      currentSettings.blacklist,
+      currentSettings.urlPatternBlacklist || []
+    );
+    if (isInBlacklist) {
+      const updatedBlacklist = currentSettings.blacklist.filter(
+        (site) => site !== domain
+      );
+      const updatedUrlPatternBlacklist = (
+        currentSettings.urlPatternBlacklist || []
+      ).filter((pattern) => !isUrlInList(currentUrl, [], [pattern]));
+      settings.setValue({
+        ...currentSettings,
+        blacklist: updatedBlacklist,
+        urlPatternBlacklist: updatedUrlPatternBlacklist,
+      });
+    } else {
+      settings.setValue({
+        ...currentSettings,
+        blacklist: [...currentSettings.blacklist, domain],
+      });
+    }
+  };
+
+  const toggleWhitelistForUrl = (
+    currentUrl: string,
+    domain: string,
+    currentSettings: Settings
+  ) => {
+    const isInWhitelist = isUrlInList(
+      currentUrl,
+      currentSettings.whitelist || [],
+      currentSettings.urlPatternWhitelist || []
+    );
+    if (isInWhitelist) {
+      const updatedWhitelist = (currentSettings.whitelist || []).filter(
+        (site) => site !== domain
+      );
+      const updatedUrlPatternWhitelist = (
+        currentSettings.urlPatternWhitelist || []
+      ).filter((pattern) => !isUrlInList(currentUrl, [], [pattern]));
+      settings.setValue({
+        ...currentSettings,
+        whitelist: updatedWhitelist,
+        urlPatternWhitelist: updatedUrlPatternWhitelist,
+      });
+    } else {
+      settings.setValue({
+        ...currentSettings,
+        whitelist: [...(currentSettings.whitelist || []), domain],
+      });
+    }
+  };
 
   browser.commands.onCommand.addListener(async (command) => {
     const currentSettings = await settings.getValue();
 
     switch (command) {
-      case "toggle_greyscale":
+      case "toggle_greyscale": {
         const newEnabled = !currentSettings.enabled;
         await settings.setValue({
           ...currentSettings,
@@ -613,6 +624,7 @@ export default defineBackground(() => {
           currentSettings.temporaryDisable
         );
         break;
+      }
 
       case "quick_toggle_blacklist":
         browser.tabs
@@ -622,121 +634,57 @@ export default defineBackground(() => {
             if (currentTab?.url) {
               const currentUrl = currentTab.url;
               const domain = getDomainFromUrl(currentUrl);
-
-              // Check if current URL is excluded (domain or pattern)
-              const isExcluded = shouldExcludeUrl(
-                currentUrl,
-                currentSettings.blacklist,
-                currentSettings.urlPatternBlacklist || [] // Updated
-              );
-              if (isExcluded) {
-                // Remove from both lists if present
-                const updatedBlacklist = currentSettings.blacklist.filter(
-                  (site) => site !== domain
-                );
-                const updatedUrlPatternBlacklist = (
-                  currentSettings.urlPatternBlacklist || []
-                ).filter((pattern) => !urlMatchesPattern(currentUrl, pattern));
-
-                settings.setValue({
-                  ...currentSettings,
-                  blacklist: updatedBlacklist,
-                  urlPatternBlacklist: updatedUrlPatternBlacklist, // Updated
-                });
+              const mode = currentSettings.mode || "blacklist";
+              if (mode === "blacklist") {
+                toggleBlacklistForUrl(currentUrl, domain, currentSettings);
               } else {
-                // Add domain (default behavior)
-                settings.setValue({
-                  ...currentSettings,
-                  blacklist: [...currentSettings.blacklist, domain],
-                });
+                toggleWhitelistForUrl(currentUrl, domain, currentSettings);
               }
             }
           });
         break;
-      case "increase_intensity":
-        if (!currentSettings.enabled) break;
+      case "increase_intensity": {
+        if (!currentSettings.enabled) {
+          break;
+        }
         const newIntensityUp = Math.min(100, currentSettings.intensity + 10);
         await settings.setValue({
           ...currentSettings,
           intensity: newIntensityUp,
         });
         break;
+      }
 
-      case "decrease_intensity":
-        if (!currentSettings.enabled) break;
+      case "decrease_intensity": {
+        if (!currentSettings.enabled) {
+          break;
+        }
         const newIntensityDown = Math.max(0, currentSettings.intensity - 10);
         await settings.setValue({
           ...currentSettings,
           intensity: newIntensityDown,
         });
         break;
+      }
+      default:
+        break;
     }
   });
-
-  // Listen for tab updates to apply greyscale to new tabs
   browser.tabs.onUpdated.addListener(async (tabId, changeInfo) => {
     const currentSettings = await settings.getValue();
     if (changeInfo.status === "complete" && currentSettings.enabled) {
       browser.tabs.get(tabId).then((tab) => {
         if (tab.url) {
-          const domain = getHostname(tab.url);
-          if (domain && !currentSettings.blacklist.includes(domain)) {
-            // Check if it's a media-only page first
-            browser.scripting
-              .executeScript({
-                target: { tabId },
-                func: isMediaOnlyPage,
-              })
-              .then((results) => {
-                const isMediaOnly = results?.[0]?.result || false;
+          const shouldApply = shouldApplyFilter(tab.url, {
+            mode: currentSettings.mode || "blacklist",
+            blacklist: currentSettings.blacklist || [],
+            urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+            whitelist: currentSettings.whitelist || [],
+            urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+          });
 
-                // Skip applying greyscale if it's a media-only page and exception is enabled
-                if (isMediaOnly && currentSettings.mediaExceptionEnabled) {
-                  return;
-                }
-
-                // Apply greyscale normally
-                browser.scripting
-                  .executeScript({
-                    target: { tabId },
-                    func: (intensity: number) => {
-                      const fullscreenElement = getFullscreenElement();
-
-                      if (
-                        fullscreenElement &&
-                        fullscreenElement instanceof HTMLElement
-                      ) {
-                        fullscreenElement.style.filter = `grayscale(${intensity}%)`;
-                        fullscreenElement.style.transition = "filter 0.2s ease";
-                      } else {
-                        let overlay = document.getElementById(
-                          "monochromate-overlay"
-                        );
-                        if (!overlay) {
-                          overlay = document.createElement("div");
-                          overlay.id = "monochromate-overlay";
-                          overlay.style.cssText = `
-                            position: fixed;
-                            top: 0;
-                            left: 0;
-                            width: 100vw;
-                            height: 100vh;
-                            pointer-events: none;
-                            z-index: 2147483647;
-                            backdrop-filter: grayscale(${intensity}%);
-                          `;
-                          document.documentElement.appendChild(overlay);
-                        } else {
-                          overlay.style.backdropFilter = `grayscale(${intensity}%)`;
-                        }
-                      }
-                    },
-                    args: [currentSettings.intensity],
-                  })
-                  .catch(() => {
-                    // Ignore errors for restricted pages
-                  });
-              });
+          if (shouldApply && !currentSettings.temporaryDisable) {
+            applyGreyscaleToTab(tabId, tab.url, currentSettings);
           }
         }
       });

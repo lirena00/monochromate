@@ -1,12 +1,12 @@
 export interface ShortcutInfo {
+  description: string;
   name: string;
   shortcut: string;
-  description: string;
 }
 
 export interface ShortcutKeys {
-  keys: string[];
   hasShortcut: boolean;
+  keys: string[];
 }
 
 export const parseShortcut = (shortcut: string): ShortcutKeys => {

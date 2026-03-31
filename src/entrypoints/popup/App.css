@@ -28,6 +28,6 @@
 
 /* For Firefox */
 * {
-  scrollbar-width: thin;
   scrollbar-color: #d1d1d1 transparent;
+  scrollbar-width: thin;
 }
