@@ -31,14 +31,6 @@ export default defineBackground(() => {
     };
   };
 
-  const getHostname = (url: string): string => {
-    try {
-      return new URL(url).hostname.replace("www.", "");
-    } catch {
-      return "";
-    }
-  };
-
   // Function to determine if grayscale should be applied (mode-aware)
   const shouldApplyGrayscale = (
     url: string,
@@ -99,13 +91,12 @@ export default defineBackground(() => {
     currentSettings: Settings
   ) => {
     const intensity = currentSettings.intensity || 100;
-    const domain = getHostname(tabUrl);
     browser.scripting
       .executeScript({ target: { tabId }, func: isMediaOnlyPage })
       .then((results) => {
         const isMediaOnly = results?.[0]?.result ?? false;
         if (
-          shouldApplyGrayscale(domain, isMediaOnly, {
+          shouldApplyGrayscale(tabUrl, isMediaOnly, {
             ...currentSettings,
             mediaExceptionEnabled: currentSettings.mediaExceptionEnabled,
           })

@@ -3,7 +3,7 @@ import {
   clearMediaCheckCache,
   isMediaOnlyPage,
 } from "@/utils/media-check-util";
-import { shouldExcludeUrl } from "@/utils/url-utils";
+import { shouldApplyFilter } from "@/utils/url-utils";
 
 const getCurrentHostname = () => {
   return window.location.hostname.replace("www.", "");
@@ -17,8 +17,11 @@ let overlayElement: HTMLDivElement | null = null;
 let currentSettings = {
   enabled: false,
   intensity: 100,
+  mode: "blacklist" as "blacklist" | "whitelist",
   blacklist: [] as string[],
   urlPatternBlacklist: [] as string[],
+  whitelist: [] as string[],
+  urlPatternWhitelist: [] as string[],
   temporaryDisable: false,
   temporaryDisableUntil: null as number | null,
   imageExceptionEnabled: false,
@@ -113,17 +116,19 @@ const getFullscreenElement = (): Element | null => {
 
 const shouldApplyGrayscale = (): boolean => {
   const currentUrl = getCurrentUrl();
-  const isExcluded = shouldExcludeUrl(
-    currentUrl,
-    currentSettings.blacklist,
-    currentSettings.urlPatternBlacklist
-  );
+  const shouldApply = shouldApplyFilter(currentUrl, {
+    mode: currentSettings.mode || "blacklist",
+    blacklist: currentSettings.blacklist || [],
+    urlPatternBlacklist: currentSettings.urlPatternBlacklist || [],
+    whitelist: currentSettings.whitelist || [],
+    urlPatternWhitelist: currentSettings.urlPatternWhitelist || [],
+  });
   const isMediaOnly = getMediaOnlyStatus();
   const isMediaException = isMediaOnly && currentSettings.imageExceptionEnabled;
   return (
     currentSettings.enabled &&
     !currentSettings.temporaryDisable &&
-    !isExcluded &&
+    shouldApply &&
     !isMediaException
   );
 };
@@ -225,8 +230,11 @@ export default defineContentScript({
     currentSettings = {
       enabled: initialSettings.enabled,
       intensity: initialSettings.intensity,
+      mode: initialSettings.mode || "blacklist",
       blacklist: initialSettings.blacklist,
       urlPatternBlacklist: initialSettings.urlPatternBlacklist || [],
+      whitelist: initialSettings.whitelist || [],
+      urlPatternWhitelist: initialSettings.urlPatternWhitelist || [],
       imageExceptionEnabled: initialSettings.mediaExceptionEnabled,
       temporaryDisable: initialSettings.temporaryDisable,
       temporaryDisableUntil: initialSettings.temporaryDisableUntil,
@@ -251,8 +259,11 @@ export default defineContentScript({
         currentSettings = {
           enabled: newSettings.enabled,
           intensity: newSettings.intensity,
+          mode: newSettings.mode || "blacklist",
           blacklist: newSettings.blacklist,
           urlPatternBlacklist: newSettings.urlPatternBlacklist || [],
+          whitelist: newSettings.whitelist || [],
+          urlPatternWhitelist: newSettings.urlPatternWhitelist || [],
           temporaryDisable: newSettings.temporaryDisable,
           temporaryDisableUntil: newSettings.temporaryDisableUntil,
           imageExceptionEnabled: newSettings.mediaExceptionEnabled,
