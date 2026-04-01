@@ -2,7 +2,7 @@
 
 A sleek browser extension that turns your web browsing experience into grayscale, helping reduce digital distractions and avoid doomscrolling.
 
-![Version](https://img.shields.io/badge/version-1.5.0-black)
+![Version](https://img.shields.io/badge/version-1.5.2-black)
 ![License](https://img.shields.io/badge/license-MIT-black)
 
 <p align="center">
@@ -19,6 +19,7 @@ A sleek browser extension that turns your web browsing experience into grayscale
 - **One-Click Toggle** - Instantly switch between color and grayscale modes
 - **Intensity Control** - Fine-tune the grayscale effect (0-100%)
 - **Site Exclusions** - Maintain a blacklist of sites where color should remain enabled
+- **Site Inclusions** - Maintain a whitelist of sites where greyscale should be enabled
 - **Smart Scheduling** - Automatically enable/disable monochrome mode at specific times
 - **Real-time Updates** - Changes apply instantly without page refresh
 - **Backup & Restore** - Export and import your settings configuration
@@ -39,13 +40,13 @@ Clone the repository and install dependencies:
 ```bash
 git clone https://github.com/your-username/monochromate.git
 cd monochromate
-pnpm install
+bun install
 ```
 
 Start the development server with:
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 This will build the extension in **watch mode**, so changes automatically reflect when reloaded in the browser.
@@ -55,8 +56,8 @@ This will build the extension in **watch mode**, so changes automatically reflec
 To generate an optimized build:
 
 ```bash
-pnpm zip
-pnpm zip:firefox
+bun zip
+bun zip:firefox
 ```
 
 This creates a final version inside the `dist/` folder, ready for submission to the Chrome Web Store and Mozilla Add-ons.
