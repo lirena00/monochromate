@@ -1,6 +1,7 @@
 import { browser } from "#imports";
 import { isMediaOnlyPage } from "@/utils/media-check-util";
 import { settings } from "@/utils/storage";
+import { fetchAllSupportData, isSupportDataStale } from "@/utils/support-api";
 import {
   getDomainFromUrl,
   isUrlInList,
@@ -287,10 +288,45 @@ export default defineBackground(() => {
     }
   };
 
+  // Fetch and update support data (donations + stars)
+  const updateSupportData = async () => {
+    try {
+      console.log("Fetching support data...");
+      const supportData = await fetchAllSupportData();
+      const currentSettings = await settings.getValue();
+
+      await settings.setValue({
+        ...currentSettings,
+        support_data: supportData,
+      });
+
+      console.log("Support data updated:", supportData);
+    } catch (error) {
+      console.error("Failed to update support data:", error);
+    }
+  };
+
+  // Check if support data is stale and fetch if needed
+  const checkAndUpdateSupportData = async () => {
+    try {
+      const currentSettings = await settings.getValue();
+
+      if (isSupportDataStale(currentSettings.support_data)) {
+        console.log("Support data is stale, fetching fresh data...");
+        await updateSupportData();
+      } else {
+        console.log("Support data is fresh, no fetch needed");
+      }
+    } catch (error) {
+      console.error("Failed to check support data freshness:", error);
+    }
+  };
+
   const initializeSettings = async () => {
     try {
       await checkTemporaryDisableExpiry();
       await checkSupportBannerDismissalExpiry();
+      await checkAndUpdateSupportData();
       const currentSettings = await settings.getValue();
       updateBadge(
         currentSettings.enabled && !currentSettings.temporaryDisable,
@@ -304,6 +340,7 @@ export default defineBackground(() => {
       }
       settingsInitialized = true;
       updateScheduleAlarm();
+      updateSupportDataAlarm();
     } catch (error) {
       console.error("Failed to initialize settings:", error);
     }
@@ -414,6 +451,14 @@ export default defineBackground(() => {
     return target.getTime();
   }
 
+  const updateSupportDataAlarm = async () => {
+    await browser.alarms.clear("FetchSupportData");
+    await browser.alarms.create("FetchSupportData", {
+      periodInMinutes: 24 * 60, // 24 hours
+    });
+    console.log("Support data alarm created");
+  };
+
   browser.alarms.onAlarm.addListener(async (alarm) => {
     const currentSettings = await settings.getValue();
 
@@ -435,6 +480,12 @@ export default defineBackground(() => {
       } catch (error) {
         console.error("Error clearing support banner dismissal:", error);
       }
+      return;
+    }
+
+    if (alarm.name === "FetchSupportData") {
+      // Fetch and update support data
+      await updateSupportData();
       return;
     }
 

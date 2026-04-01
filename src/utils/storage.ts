@@ -1,4 +1,5 @@
 import { storage } from "#imports";
+import type { SupportData } from "@/types/support-data";
 
 interface MonofilterTypes_v1 {
   blacklist: string[];
@@ -43,6 +44,7 @@ interface MonofilterTypes {
   schedule: boolean;
   scheduleEnd: string;
   scheduleStart: string;
+  support_data?: SupportData;
   temporaryDisable: boolean;
   temporaryDisableUntil: number | null;
   urlPatternBlacklist: string[];
