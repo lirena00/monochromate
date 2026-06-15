@@ -21,6 +21,22 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
     undefined
   );
   const [isLoading, setIsLoading] = useState(true);
+  const FALLBACK_REEL = "https://www.instagram.com/p/DZm9y3qTZMv/";
+
+  const [reelUrl, setReelUrl] = useState(FALLBACK_REEL);
+
+  useEffect(() => {
+    fetch("https://www.hiokipi.com/api/instagram")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.url) {
+          setReelUrl(data.url);
+        }
+      })
+      .catch(() => {
+        // silently fall back to hardcoded reel
+      });
+  }, []);
 
   const messages = [
     {
@@ -28,8 +44,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
       title: "We're building something new",
       text: "Watch the soft launch reel and show some love, a like or comment will really help us a lot.",
       cta: "Watch Reel",
-      action: () =>
-        window.open("https://www.instagram.com/p/DZm9y3qTZMv/", "_blank"),
+      action: () => window.open(reelUrl, "_blank"),
     },
     {
       icon: <Hiokipi className="text-neutral-700" fontSize={18} />,
