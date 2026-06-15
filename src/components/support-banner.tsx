@@ -3,23 +3,45 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import type { SupportData } from "@/types/support-data";
 import { settings } from "@/utils/storage";
+import { Hiokipi } from "./icons/Hiokipi";
+import { Instagram } from "./icons/Instagram";
 
 interface SupportBannerProps {
   onDismiss?: () => void;
 }
 
-const DONATION_TARGET = 75; // $75 USD
-const STARS_TARGET = 150; // 150 stars
+const DONATION_TARGET = 75;
+const STARS_TARGET = 150;
 
 const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
   const [currentMessage, setCurrentMessage] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
   const [supportData, setSupportData] = useState<SupportData | undefined>(
     undefined
   );
   const [isLoading, setIsLoading] = useState(true);
 
   const messages = [
+    {
+      icon: <Instagram className="text-neutral-700" fontSize={18} />,
+      title: "We're building something new",
+      text: "Watch the soft launch reel and show some love, a like or comment will really help us a lot.",
+      cta: "Watch Reel",
+      action: () =>
+        window.open("https://www.instagram.com/p/DZm9y3qTZMv/", "_blank"),
+    },
+    {
+      icon: <Hiokipi className="text-neutral-700" fontSize={18} />,
+      title: "Meet Okipi",
+      text: "A digital desk pet that lives on your screen. Be first in line when it launches.",
+      cta: "Join Waitlist",
+      action: () =>
+        window.open(
+          "https://www.hiokipi.com/?utm_source=monochromate",
+          "_blank"
+        ),
+    },
     {
       icon: <Gift className="text-neutral-700" size={18} />,
       title: "Keep Monochromate free",
@@ -39,15 +61,18 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
     },
   ];
 
+  // Auto-advance
   useEffect(() => {
+    if (isPaused) {
+      return;
+    }
     const interval = setInterval(() => {
       setCurrentMessage((prev) => (prev + 1) % messages.length);
-    }, 8000);
-
+    }, 4000);
     return () => clearInterval(interval);
-  }, [messages.length]);
+  }, [messages.length, isPaused]);
 
-  // Load support data from storage
+  // Load support data
   useEffect(() => {
     const loadSupportData = async () => {
       try {
@@ -59,37 +84,16 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
         setIsLoading(false);
       }
     };
-
     loadSupportData();
-
-    // Watch for updates
     const unwatch = settings.watch((newSettings) => {
       setSupportData(newSettings?.support_data);
     });
-
     return () => {
       unwatch();
     };
   }, []);
 
-  const handleDismiss = async () => {
-    setIsVisible(false);
-
-    // Create alarm to re-enable banner after 2 days
-    const dismissUntil = Date.now() + 2 * 24 * 60 * 60 * 1000; // 2 days
-    await browser.alarms.create("SupportBannerDismissed", {
-      when: dismissUntil,
-    });
-
-    // Store dismissal state
-    await browser.storage.local.set({
-      supportBannerDismissed: true,
-      supportBannerDismissedUntil: dismissUntil,
-    });
-
-    onDismiss?.();
-  };
-
+  // Check dismissal
   useEffect(() => {
     const checkDismissalState = async () => {
       try {
@@ -97,7 +101,6 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
           "supportBannerDismissed",
           "supportBannerDismissedUntil",
         ]);
-
         if (
           result.supportBannerDismissed &&
           result.supportBannerDismissedUntil
@@ -106,7 +109,6 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
           if (timeRemaining > 0) {
             setIsVisible(false);
           } else {
-            // Dismissal period expired, clear the state
             await browser.storage.local.remove([
               "supportBannerDismissed",
               "supportBannerDismissedUntil",
@@ -118,9 +120,21 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
         console.error("Error checking support banner dismissal state:", error);
       }
     };
-
     checkDismissalState();
   }, []);
+
+  const handleDismiss = async () => {
+    setIsVisible(false);
+    const dismissUntil = Date.now() + 1 * 24 * 60 * 60 * 1000;
+    await browser.alarms.create("SupportBannerDismissed", {
+      when: dismissUntil,
+    });
+    await browser.storage.local.set({
+      supportBannerDismissed: true,
+      supportBannerDismissedUntil: dismissUntil,
+    });
+    onDismiss?.();
+  };
 
   if (!isVisible) {
     return null;
@@ -128,7 +142,6 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
 
   const currentMsg = messages[currentMessage];
 
-  // Calculate progress
   const donationAmount = supportData?.donations.total || 0;
   const donationProgress = Math.min(
     (donationAmount / DONATION_TARGET) * 100,
@@ -141,9 +154,44 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
   const starComplete = starProgress >= 100;
 
   return (
-    <div className="relative rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400">
+    <div
+      className="relative rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400"
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      {/* Dismiss button */}
+      <button
+        className="absolute top-0 right-0 rounded-tr-xl rounded-bl-lg bg-neutral-800 p-1 transition-colors hover:bg-neutral-900"
+        onClick={handleDismiss}
+        title="Dismiss for 1 day"
+        type="button"
+      >
+        <X className="text-white" size={10} />
+      </button>
+
+      {/* Dot navigation — top */}
+      <div className="mb-3 flex items-center justify-center gap-1.5">
+        {messages.map((_, i) => (
+          <button
+            aria-label={`Go to message ${i + 1}`}
+            className={`rounded-full transition-all duration-300 ${
+              i === currentMessage
+                ? "h-1.5 w-4 bg-neutral-700"
+                : "h-1.5 w-1.5 bg-neutral-300 hover:bg-neutral-400"
+            }`}
+            key={i}
+            onClick={() => {
+              setCurrentMessage(i);
+              setIsPaused(true);
+              setTimeout(() => setIsPaused(false), 6000);
+            }}
+            type="button"
+          />
+        ))}
+      </div>
+
+      {/* Message */}
       <div className="flex flex-col gap-2">
-        {/* Message section */}
         <div className="flex items-center gap-2">
           <div className="text-neutral-700">{currentMsg.icon}</div>
           <div className="flex-1">
@@ -152,26 +200,16 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
             </h2>
             <p className="text-neutral-500 text-xs italic">{currentMsg.text}</p>
           </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              className="rounded-lg bg-neutral-800 px-3 py-2 text-white text-xs transition-colors hover:bg-neutral-900"
-              onClick={currentMsg.action}
-              type="button"
-            >
-              {currentMsg.cta}
-            </button>
-            <button
-              className="absolute top-0 right-0 rounded-tr-lg rounded-bl-lg bg-neutral-800 p-1 transition-colors hover:bg-neutral-900"
-              onClick={handleDismiss}
-              title="Dismiss for 2 days"
-              type="button"
-            >
-              <X className="text-white" size={10} />
-            </button>
-          </div>
+          <button
+            className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-white text-xs transition-colors hover:bg-neutral-900"
+            onClick={currentMsg.action}
+            type="button"
+          >
+            {currentMsg.cta}
+          </button>
         </div>
 
-        {/* Progress bar (conditional based on message type) */}
+        {/* Progress bars */}
         {currentMsg.showDonations && (
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
