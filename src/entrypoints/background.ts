@@ -291,18 +291,17 @@ export default defineBackground(() => {
   // Fetch and update support data (donations + stars)
   const updateSupportData = async () => {
     try {
-      console.log("Fetching support data...");
-      const supportData = await fetchAllSupportData();
       const currentSettings = await settings.getValue();
+      const previous = currentSettings.support_data;
+      const supportData = await fetchAllSupportData(previous);
 
       await settings.setValue({
         ...currentSettings,
         support_data: supportData,
       });
-
-      console.log("Support data updated:", supportData);
     } catch (error) {
       console.error("Failed to update support data:", error);
+      // don't wipe existing data — silently bail
     }
   };
 

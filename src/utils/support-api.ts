@@ -95,24 +95,40 @@ export async function fetchGitHubStars(): Promise<number> {
 /**
  * Fetch all support data (donations + stars)
  */
-export async function fetchAllSupportData(): Promise<SupportData> {
+
+export async function fetchAllSupportData(
+  previous?: SupportData
+): Promise<SupportData> {
   const now = Date.now();
 
-  // Fetch both in parallel for better performance
-  const [donations, stars] = await Promise.all([
+  const [donationsResult, starsResult] = await Promise.allSettled([
     fetchBMCDonations(),
     fetchGitHubStars(),
   ]);
 
+  const donations =
+    donationsResult.status === "fulfilled"
+      ? donationsResult.value
+      : (previous?.donations.total ?? 0);
+
+  const stars =
+    starsResult.status === "fulfilled"
+      ? starsResult.value
+      : (previous?.stars.count ?? 0);
+
+  const donationsFetched =
+    donationsResult.status === "fulfilled"
+      ? now
+      : (previous?.donations.lastFetched ?? now);
+
+  const starsFetched =
+    starsResult.status === "fulfilled"
+      ? now
+      : (previous?.stars.lastFetched ?? now);
+
   return {
-    donations: {
-      total: donations,
-      lastFetched: now,
-    },
-    stars: {
-      count: stars,
-      lastFetched: now,
-    },
+    donations: { total: donations, lastFetched: donationsFetched },
+    stars: { count: stars, lastFetched: starsFetched },
   };
 }
 
