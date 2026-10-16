@@ -372,7 +372,7 @@ const SiteListManagement: React.FC<SiteListManagementProps> = ({
             }
           }}
           placeholder={
-            "youtube.com, reddit.com/r/*\nComma or newline separated"
+            "youtube.com, *.google.com, reddit.com/r/*\nComma or newline separated"
           }
           value={addText}
         />

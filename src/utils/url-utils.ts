@@ -6,8 +6,40 @@
 // Top-level regex constants for performance
 const WWW_PREFIX_REGEX = /^www\./;
 const PROTOCOL_AND_WWW_REGEX = /^(https?:\/\/)?(www\.)?/;
-const PROTOCOL_REGEX = /^https?:\/\//;
+const PROTOCOL_REGEX = /^https?:\/\//i;
 const COMMA_NEWLINE_SPLIT_REGEX = /[,\n]+/;
+const SUBDOMAIN_PREFIX_REGEX = /^(https?:\/\/)?\*\./i;
+const SUBDOMAIN_HOST_REGEX =
+  /^\*\.(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+const URL_PATH_PART_REGEX = /[/?#]/;
+
+interface SubdomainPattern {
+  hostname: string;
+  path: string | null;
+}
+
+const getSubdomainPattern = (pattern: string): SubdomainPattern | null => {
+  if (!SUBDOMAIN_PREFIX_REGEX.test(pattern)) {
+    return null;
+  }
+  try {
+    const parsed = new URL(
+      PROTOCOL_REGEX.test(pattern) ? pattern : `https://${pattern}`
+    );
+    if (!SUBDOMAIN_HOST_REGEX.test(parsed.hostname)) {
+      return null;
+    }
+    const hasPath = URL_PATH_PART_REGEX.test(
+      pattern.replace(PROTOCOL_REGEX, "")
+    );
+    return {
+      hostname: parsed.hostname.slice(2),
+      path: hasPath ? `${parsed.pathname}${parsed.search}${parsed.hash}` : null,
+    };
+  } catch {
+    return null;
+  }
+};
 
 export interface URLExclusion {
   displayName: string;
@@ -89,6 +121,31 @@ export const patternToRegex = (pattern: string): RegExp => {
  * Supports wildcard matching with *
  */
 export const urlMatchesPattern = (url: string, pattern: string): boolean => {
+  const subdomainPattern = getSubdomainPattern(pattern);
+  if (subdomainPattern) {
+    try {
+      const parsed = new URL(PROTOCOL_REGEX.test(url) ? url : `https://${url}`);
+      const suffix = `.${subdomainPattern.hostname}`;
+      // Match the hostname separately so wildcards cannot consume URL paths.
+      const isChildDomain =
+        parsed.hostname.length > suffix.length &&
+        parsed.hostname.endsWith(suffix);
+      if (!isChildDomain) {
+        return false;
+      }
+      return (
+        subdomainPattern.path === null ||
+        patternToRegex(subdomainPattern.path).test(
+          `${parsed.pathname}${parsed.search}${parsed.hash}`
+        )
+      );
+    } catch {
+      return false;
+    }
+  }
+  if (SUBDOMAIN_PREFIX_REGEX.test(pattern)) {
+    return false;
+  }
   const normalizedUrl = normalizeUrl(url);
   const normalizedPattern = normalizeUrl(pattern);
 
@@ -247,6 +304,9 @@ export const getUnifiedExclusions = (
  * Validates a URL pattern
  */
 export const isValidUrlPattern = (pattern: string): boolean => {
+  if (SUBDOMAIN_PREFIX_REGEX.test(pattern)) {
+    return getSubdomainPattern(pattern) !== null;
+  }
   try {
     // Remove wildcards for validation
     const cleanPattern = pattern.replace(/\*/g, "placeholder");

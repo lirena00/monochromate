@@ -421,7 +421,7 @@ const BlacklistManagement: React.FC<BlacklistManagementProps> = ({
 
               {customPattern && !isValidUrlPattern(customPattern) && (
                 <p className="mt-1 text-red-500 text-xs">
-                  Invalid pattern. Use format: domain.com/path/*
+                  Invalid pattern. Use domain.com/path/* or *.example.org
                 </p>
               )}
             </div>
