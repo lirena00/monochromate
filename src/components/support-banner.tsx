@@ -1,10 +1,10 @@
-import { Check, Gift, Star, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BannerIcon } from "@/components/banner-icon";
 import type { SupportData } from "@/types/support-data";
-import { settings } from "@/utils/storage";
-import { Hiokipi } from "./icons/Hiokipi";
-import { Instagram } from "./icons/Instagram";
+import { DEFAULT_BANNERS, loadBannerConfig } from "@/utils/banner-config";
+import { bannerConfigCache, settings } from "@/utils/storage";
 
 interface SupportBannerProps {
   onDismiss?: () => void;
@@ -21,60 +21,44 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
     undefined
   );
   const [isLoading, setIsLoading] = useState(true);
-  const FALLBACK_REEL = "https://www.instagram.com/p/DZm9y3qTZMv/";
-
-  const [reelUrl, setReelUrl] = useState(FALLBACK_REEL);
+  const [messages, setMessages] = useState(DEFAULT_BANNERS);
+  const bannerRef = useRef<HTMLDivElement>(null);
+  const resumeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    fetch("https://www.hiokipi.com/api/instagram")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.url) {
-          setReelUrl(data.url);
-        }
-      })
-      .catch(() => {
-        // silently fall back to hardcoded reel
-      });
+    const banner = bannerRef.current;
+    const pauseRotation = () => setIsPaused(true);
+    const resumeRotation = () => setIsPaused(false);
+    banner?.addEventListener("mouseenter", pauseRotation);
+    banner?.addEventListener("mouseleave", resumeRotation);
+    return () => {
+      banner?.removeEventListener("mouseenter", pauseRotation);
+      banner?.removeEventListener("mouseleave", resumeRotation);
+      if (resumeTimeout.current !== null) {
+        clearTimeout(resumeTimeout.current);
+      }
+    };
   }, []);
 
-  const messages = [
-    {
-      icon: <Instagram className="text-neutral-700" fontSize={18} />,
-      title: "We're building something new",
-      text: "Watch the soft launch reel and show some love, a like or comment will really help us a lot.",
-      cta: "Watch Reel",
-      action: () => window.open(reelUrl, "_blank"),
-    },
-    {
-      icon: <Hiokipi className="text-neutral-700" fontSize={18} />,
-      title: "Meet Okipi",
-      text: "A digital desk pet that lives on your screen. Be first in line when it launches.",
-      cta: "Join Waitlist",
-      action: () =>
-        window.open(
-          "https://www.hiokipi.com/?utm_source=monochromate",
-          "_blank"
-        ),
-    },
-    {
-      icon: <Gift className="text-neutral-700" size={18} />,
-      title: "Keep Monochromate free",
-      text: "Your support helps us add new features and keep the extension open source",
-      cta: "Donate",
-      action: () => window.open("https://buymeacoffee.com/lirena00", "_blank"),
-      showDonations: true,
-    },
-    {
-      icon: <Star className="text-neutral-700" size={18} />,
-      title: "Love it? Star it.",
-      text: "Star the repo to help others discover it",
-      cta: "Star on GitHub",
-      action: () =>
-        window.open("https://github.com/lirena00/monochromate", "_blank"),
-      showStars: true,
-    },
-  ];
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    const loadBanners = async () => {
+      const banners = await loadBannerConfig(
+        bannerConfigCache,
+        controller.signal
+      );
+      if (active) {
+        setCurrentMessage(0);
+        setMessages(banners);
+      }
+    };
+    loadBanners();
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, []);
 
   // Auto-advance
   useEffect(() => {
@@ -155,7 +139,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
     return null;
   }
 
-  const currentMsg = messages[currentMessage];
+  const currentMsg = messages[currentMessage % messages.length];
 
   const donationAmount = supportData?.donations.total || 0;
   const donationProgress = Math.min(
@@ -171,8 +155,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
   return (
     <div
       className="relative rounded-xl border border-neutral-300 bg-neutral-100 p-4 transition-all hover:border-neutral-400"
-      onMouseEnter={() => setIsPaused(true)}
-      onMouseLeave={() => setIsPaused(false)}
+      ref={bannerRef}
     >
       {/* Dismiss button */}
       <button
@@ -186,7 +169,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
 
       {/* Dot navigation — top */}
       <div className="mb-3 flex items-center justify-center gap-1.5">
-        {messages.map((_, i) => (
+        {messages.map((message, i) => (
           <button
             aria-label={`Go to message ${i + 1}`}
             className={`rounded-full transition-all duration-300 ${
@@ -194,11 +177,17 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
                 ? "h-1.5 w-4 bg-neutral-700"
                 : "h-1.5 w-1.5 bg-neutral-300 hover:bg-neutral-400"
             }`}
-            key={i}
+            key={message.id}
             onClick={() => {
               setCurrentMessage(i);
               setIsPaused(true);
-              setTimeout(() => setIsPaused(false), 6000);
+              if (resumeTimeout.current !== null) {
+                clearTimeout(resumeTimeout.current);
+              }
+              resumeTimeout.current = setTimeout(
+                () => setIsPaused(false),
+                6000
+              );
             }}
             type="button"
           />
@@ -208,7 +197,9 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
       {/* Message */}
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
-          <div className="text-neutral-700">{currentMsg.icon}</div>
+          <div className="shrink-0 text-neutral-700">
+            <BannerIcon iconUrl={currentMsg.iconUrl} kind={currentMsg.kind} />
+          </div>
           <div className="flex-1">
             <h2 className="font-semibold text-neutral-800 text-sm">
               {currentMsg.title}
@@ -217,7 +208,9 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
           </div>
           <button
             className="shrink-0 rounded-lg bg-neutral-800 px-3 py-2 text-white text-xs transition-colors hover:bg-neutral-900"
-            onClick={currentMsg.action}
+            onClick={() =>
+              window.open(currentMsg.url, "_blank", "noopener,noreferrer")
+            }
             type="button"
           >
             {currentMsg.cta}
@@ -225,7 +218,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
         </div>
 
         {/* Progress bars */}
-        {currentMsg.showDonations && (
+        {currentMsg.kind === "donations" && (
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
               <span className="text-neutral-600 text-xs">
@@ -253,7 +246,7 @@ const SupportBanner: React.FC<SupportBannerProps> = ({ onDismiss }) => {
           </div>
         )}
 
-        {currentMsg.showStars && (
+        {currentMsg.kind === "stars" && (
           <div className="flex flex-col gap-1">
             <div className="flex items-center justify-between">
               <span className="text-neutral-600 text-xs">

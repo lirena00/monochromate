@@ -1,5 +1,10 @@
 import { storage } from "#imports";
 import type { SupportData } from "@/types/support-data";
+import type { BannerConfigCache } from "@/utils/banner-config";
+
+export const bannerConfigCache = storage.defineItem<BannerConfigCache>(
+  "local:bannerConfigCache"
+);
 
 interface MonofilterTypes_v1 {
   blacklist: string[];
