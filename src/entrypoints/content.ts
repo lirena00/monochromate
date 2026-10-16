@@ -1,4 +1,5 @@
 import type { ContentScriptContext } from "#imports";
+import { updateGrayscaleEffect } from "@/utils/grayscale-effect";
 import {
   clearMediaCheckCache,
   isMediaOnlyPage,
@@ -13,7 +14,6 @@ const getCurrentUrl = () => {
   return window.location.href;
 };
 
-let overlayElement: HTMLDivElement | null = null;
 let currentSettings = {
   enabled: false,
   intensity: 100,
@@ -27,7 +27,6 @@ let currentSettings = {
   imageExceptionEnabled: false,
 };
 
-let isFullscreenActive = false;
 let mutationObserver: MutationObserver | null = null;
 
 // Cache media check result for the current page
@@ -66,54 +65,6 @@ const getMediaOnlyStatus = (): boolean => {
   return cachedMediaOnlyResult;
 };
 
-const updateOverlay = (show: boolean, intensity = 100) => {
-  if (show && !isFullscreenActive && !currentSettings.temporaryDisable) {
-    if (overlayElement) {
-      overlayElement.style.backdropFilter = `grayscale(${intensity}%)`;
-    } else {
-      overlayElement = document.createElement("div");
-      overlayElement.id = "monochromate-overlay";
-      overlayElement.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        pointer-events: none;
-        z-index: 2147483647;
-        backdrop-filter: grayscale(${intensity}%);
-      `;
-      document.documentElement.appendChild(overlayElement);
-    }
-  } else if (overlayElement) {
-    overlayElement.remove();
-    overlayElement = null;
-  }
-};
-
-const applyFullscreenGreyscale = (element: Element, intensity: number) => {
-  if (element instanceof HTMLElement) {
-    element.style.filter = `grayscale(${intensity}%)`;
-    element.style.transition = "filter 0.2s ease";
-  }
-};
-
-const removeFullscreenGreyscale = (element: Element) => {
-  if (element instanceof HTMLElement) {
-    element.style.filter = "";
-    element.style.transition = "";
-  }
-};
-
-const getFullscreenElement = (): Element | null => {
-  return (
-    document.fullscreenElement ||
-    (document as Document & { webkitFullscreenElement?: Element })
-      .webkitFullscreenElement ||
-    null
-  );
-};
-
 const shouldApplyGrayscale = (): boolean => {
   const currentUrl = getCurrentUrl();
   const shouldApply = shouldApplyFilter(currentUrl, {
@@ -133,41 +84,10 @@ const shouldApplyGrayscale = (): boolean => {
   );
 };
 const applyGrayscaleEffect = () => {
-  const shouldApply = shouldApplyGrayscale();
-  const fullscreenElement = getFullscreenElement();
-
-  if (isFullscreenActive && fullscreenElement) {
-    if (shouldApply) {
-      applyFullscreenGreyscale(fullscreenElement, currentSettings.intensity);
-    } else {
-      removeFullscreenGreyscale(fullscreenElement);
-    }
-  } else {
-    updateOverlay(shouldApply, currentSettings.intensity);
-  }
+  updateGrayscaleEffect(shouldApplyGrayscale(), currentSettings.intensity);
 };
 
 const handleFullscreenChange = () => {
-  const fullscreenElement = getFullscreenElement();
-  const wasFullscreen = isFullscreenActive;
-  isFullscreenActive = !!fullscreenElement;
-
-  if (isFullscreenActive && fullscreenElement) {
-    updateOverlay(false);
-  } else if (wasFullscreen) {
-    // Clean up any fullscreen grayscale
-    const grayscaleElements = document.querySelectorAll('[style*="grayscale"]');
-    for (const element of grayscaleElements) {
-      if (
-        element instanceof HTMLElement &&
-        element.style.filter.includes("grayscale")
-      ) {
-        removeFullscreenGreyscale(element);
-      }
-    }
-  }
-
-  // Apply effect immediately without debounce for fullscreen changes
   applyGrayscaleEffect();
 };
 
@@ -316,18 +236,7 @@ export default defineContentScript({
         mutationObserver.disconnect();
         mutationObserver = null;
       }
-      if (overlayElement) {
-        overlayElement.remove();
-        overlayElement = null;
-      }
-      for (const element of document.querySelectorAll('[style*="grayscale"]')) {
-        if (
-          element instanceof HTMLElement &&
-          element.style.filter.includes("grayscale")
-        ) {
-          removeFullscreenGreyscale(element);
-        }
-      }
+      updateGrayscaleEffect(false);
       unwatchSettings();
       clearMediaCheckCache();
     });

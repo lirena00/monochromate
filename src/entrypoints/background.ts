@@ -1,4 +1,5 @@
 import { browser } from "#imports";
+import { updateGrayscaleEffect } from "@/utils/grayscale-effect";
 import { isMediaOnlyPage } from "@/utils/media-check-util";
 import { settings } from "@/utils/storage";
 import { fetchAllSupportData, isSupportDataStale } from "@/utils/support-api";
@@ -58,28 +59,8 @@ export default defineBackground(() => {
     browser.scripting
       .executeScript({
         target: { tabId },
-        func: (intensityArg: number) => {
-          const fsEl =
-            document.fullscreenElement ||
-            (document as Document & { webkitFullscreenElement?: Element })
-              .webkitFullscreenElement ||
-            null;
-          if (fsEl instanceof HTMLElement) {
-            fsEl.style.filter = `grayscale(${intensityArg}%)`;
-            fsEl.style.transition = "filter 0.2s ease";
-          } else {
-            let overlay = document.getElementById("monochromate-overlay");
-            if (overlay) {
-              overlay.style.backdropFilter = `grayscale(${intensityArg}%)`;
-            } else {
-              overlay = document.createElement("div");
-              overlay.id = "monochromate-overlay";
-              overlay.style.cssText = `position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483647;backdrop-filter:grayscale(${intensityArg}%)`;
-              document.documentElement.appendChild(overlay);
-            }
-          }
-        },
-        args: [intensity],
+        func: updateGrayscaleEffect,
+        args: [true, intensity],
       })
       .catch(() => {
         // Silently fail for tabs that can't be modified
@@ -91,7 +72,10 @@ export default defineBackground(() => {
     tabUrl: string,
     currentSettings: Settings
   ) => {
-    const intensity = currentSettings.intensity || 100;
+    if (!currentSettings.enabled || currentSettings.temporaryDisable) {
+      return;
+    }
+    const intensity = currentSettings.intensity ?? 100;
     browser.scripting
       .executeScript({ target: { tabId }, func: isMediaOnlyPage })
       .then((results) => {
@@ -153,24 +137,8 @@ export default defineBackground(() => {
           browser.scripting
             .executeScript({
               target: { tabId: tab.id },
-              func: () => {
-                const overlay = document.getElementById("monochromate-overlay");
-                if (overlay) {
-                  overlay.remove();
-                }
-
-                for (const element of document.querySelectorAll(
-                  '[style*="grayscale"]'
-                )) {
-                  if (
-                    element instanceof HTMLElement &&
-                    element.style.filter.includes("grayscale")
-                  ) {
-                    element.style.filter = "";
-                    element.style.transition = "";
-                  }
-                }
-              },
+              func: updateGrayscaleEffect,
+              args: [false],
             })
             .catch(() => {
               // Silently fail for restricted tabs
