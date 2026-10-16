@@ -31,6 +31,19 @@ A sleek browser extension that turns your web browsing experience into grayscale
 - **Media-only page exclusion** - Media only page can be excluded
 - **Shortcut keys** - Shortcut keys for several actions to access them swiftly
 
+## Subdomain patterns
+
+In **Manage Sites → Add Sites**, enter `*.google.com` to match all child domains
+in either the blacklist or whitelist. This includes `mail.google.com`,
+`www.google.com`, and deeper names such as `dev.team.google.com`, on any path.
+The parent `google.com` itself is separate; add it too if needed.
+
+Patterns can start at any depth: `*.team.corp.example.org` matches
+`dev.team.corp.example.org` and `www.dev.team.corp.example.org`.
+Use `*.example.org/private/*` to limit matching to a path, or the existing
+`*.example.org/*` form for all paths. Hostname matching respects domain boundaries,
+so these patterns do not match unrelated domains or domain names in URL paths.
+
 ## 🛠️ **Development**
 
 ### **Setup & Run**
